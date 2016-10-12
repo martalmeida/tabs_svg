@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet and D3 Map</title>
+    <meta charset="utf-8" />
+    <link  rel="stylesheet"  href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
+	<script src="https://code.jquery.com/jquery-3.1.0.min.js" ></script>
+<style>html, body, #mapsWrapper { width:100%; height:800px; margin:0; padding:0; }</style>
+</head>
+<body>
+    <div id="mapsWrapper"></div>
+
+	<script src="http://d3js.org/d3.v3.js"></script>
+    <script src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>
+    <script>
+	
+var map;
+
+fnLoadMaps();
+
+function fnLoadMaps(){
+    
+	var fixedGeoShape,transform,path;
+    map = L.map('mapsWrapper').setView([-41.287, 174.7968], 15);
+    
+    L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+        maxZoom: 20
+    }).addTo(map);
+    
+    
+	//Create a d3.geo.path to convert GeoJSON to SVG
+	d3.json("special.json", function(geoShape) {
+		transform = d3.geo.transform({point: projectPoint}),
+		path = d3.geo.path().projection(transform),
+		fixedGeoShape = geoShape;
+	});
+	
+    //Import the SVG
+    d3.xml("salt_mask.svg", "image/svg+xml", function(svgImg) {
+         map.getPanes().overlayPane.appendChild(svgImg.documentElement);
+         map.on("viewreset", reset);
+         reset();
+         
+         function reset() {
+			bounds = path.bounds(fixedGeoShape);
+            var topLeft = bounds[0], bottomRight = bounds[1];
+			$("svg").attr("width",bottomRight[0] - topLeft[0])
+				.attr("height",bottomRight[1] - topLeft[1])
+				.css({"left":topLeft[0], "top":topLeft[1]});        
+        }
+    });
+}
+
+// Use Leaflet to implement a D3 geometric transformation.
+function projectPoint(x, y) {
+	var point = map.latLngToLayerPoint(new L.LatLng(y, x));
+	this.stream.point(point.x, point.y);
+}
+        
+    </script>
+</body>
+</html>

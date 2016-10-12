@@ -1,0 +1,5 @@
+Material de apoio para determinar as coordenadas a trabalhar:
+http://geojson.io/
+
+
+

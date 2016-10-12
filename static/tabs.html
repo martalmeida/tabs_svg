@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet and D3 Map</title>
+    <meta charset="utf-8" />
+    <link  rel="stylesheet"  href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
+	<script src="https://code.jquery.com/jquery-3.1.0.min.js" ></script>
+	<script src="js/jscolor.js" ></script>
+	<script src="js/config.js" ></script>
+
+<!--
+<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+-->
+
+<style>html, body, #mapsWrapper { width:100%; height:800px; margin:0; padding:0; }</style>
+</head>
+<body>
+    <div id="mapsWrapper" style="height: 480px; width:800px"></div>
+
+	<script src="http://d3js.org/d3.v3.js"></script>
+    <script src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>
+    <script>
+
+
+	
+var map;
+
+fnLoadMaps();
+
+function fnLoadMaps(){
+    
+	var fixedGeoShape,transform,path;
+//    map = L.map('mapsWrapper').setView([23, -93], 6);
+    map = L.map('mapsWrapper').setView([28,-93], 7);
+    
+    L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+        maxZoom: 20
+    }).addTo(map);
+    
+//    map.on('load',show_only('salt'));
+
+	//Create a d3.geo.path to convert GeoJSON to SVG
+	d3.json("special.json_alex", function(geoShape) {
+		transform = d3.geo.transform({point: projectPoint}),
+		path = d3.geo.path().projection(transform),
+		fixedGeoShape = geoShape;
+	});
+
+//$.getJSON('special.json_alex', function (data) {
+//    // Define the geojson layer and add it to the map
+//    L.geoJson(data).addTo(map);
+//});
+
+
+    //Import the SVG
+//    d3.xml("salt_temp_speed_bathy.svg", "image/svg+xml", function(svgImg) {
+    d3.xml("new.svg", "image/svg+xml", function(svgImg) {
+         map.getPanes().overlayPane.appendChild(svgImg.documentElement);
+         map.on("viewreset", reset);
+         reset();
+         
+         function reset() {
+              bounds = path.bounds(fixedGeoShape);
+            var topLeft = bounds[0], bottomRight = bounds[1];
+            var WW=bottomRight[0] - topLeft[0];
+            var HH=bottomRight[1] - topLeft[1];
+//            alert(WW+'----'+HH);
+			$("svg").attr("width",bottomRight[0] - topLeft[0])
+				.attr("height",HH)
+				.css({"left":topLeft[0], "top":topLeft[1]});
+        show_only('salt');
+        update_vars();
+
+        after_svg_tasks();
+        }
+    });
+
+
+}
+
+// Use Leaflet to implement a D3 geometric transformation.
+function projectPoint(x, y) {
+	var point = map.latLngToLayerPoint(new L.LatLng(y, x));
+	this.stream.point(point.x, point.y);
+}
+
+function show_hide(what){
+  var ids="[id*="+what+"]";
+  var opac=$(ids).css('opacity');
+
+  if (opac==1){
+    $(ids).css({'opacity':0});
+  }else{
+    $(ids).css({'opacity':1});
+  }
+}
+
+function capitalize(str) {
+    var strVal = '';
+    str = str.split(' ');
+    for (var chr = 0; chr < str.length; chr++) {
+        strVal += str[chr].substring(0, 1).toUpperCase() + str[chr].substring(1, str[chr].length) + ' '
+    }
+    return strVal
+}
+
+function show_only(what){
+  var ids="[id*="+what+"]";
+  var names=['temp','salt','speed'];
+
+//  alert(document.getElementById('cbar').getSVGDocument());
+  if (document.getElementById('cbar').getSVGDocument()){
+    $(document.getElementById('cbar').getSVGDocument().getElementById('cbar_'+what)).css({'opacity':1});
+  }
+
+
+  $(ids).css({'opacity':1});
+  $('#radio'+capitalize(what)).prop('checked',1);
+
+  // hide all others:
+  for (var i = 0; i < names.length; i++) {
+    if (names[i]!=what){
+      $("[id*="+names[i]+"]").css({'opacity':0});
+      if (document.getElementById('cbar').getSVGDocument()){
+        $(document.getElementById('cbar').getSVGDocument().getElementById('cbar_'+names[i])).css({'opacity':0});
+      }
+    }
+
+  }
+}
+
+// update on load or zoom:
+function update_vars(){
+  //change isobaths to show and lw according to zoom
+  var zoom=map.getZoom();
+
+  // isobaths and currents line width:
+  if (zoom<=7){
+    var lw=1;
+  }else{
+    var lw=1/Math.pow(2,zoom-7)
+  }
+
+  zoom = zoom<=7 ? 7:zoom;
+  zoom = zoom>=9 ? 9:zoom;
+
+  // isobaths and clabels:
+  // hide all and show for current zoom:
+  $("[id*=_bathy_]").css({'opacity':0});
+  $("[id*=h_bathy_"+zoom+"]").css({"opacity":1,"stroke-width":lw});
+  $("[id*=c_bathy_"+zoom+"]").css({"opacity":1});
+
+  // currents:
+  // hide all and show for current zoom:
+  $("[id*=currents_]").css({'opacity':0});
+  $("[id*=currents_"+zoom+"]").css({'opacity':1,"stroke-width":lw});
+  $("[id*=currents_"+zoom+"]").children().css({"stroke-width":lw});
+
+  // currents key:
+  ob=document.getElementById('currents_'+zoom+'_scale');
+  var width_1=ob.getBoundingClientRect()['width'];
+  var pts="0,10 "+width_1+",10 "+(width_1-10)+",5 "+width_1+",10 "+(width_1-10)+",15 "+width_1+",10";
+  //alert(pts);
+  $('#ckey').attr('points',pts);
+
+  
+  //alert($(ob);
+}
+
+
+//    $('svg').ready(function(){show_only('salt')})
+
+
+// when page is ready:
+
+
+function after_svg_tasks(){
+
+  if (Init){
+    Init=0;
+
+    // update default uv colour:
+    $('#input_uv_color').val(config['uv_color']);
+    change_uv_color(config['uv_color']);
+    $('#input_uv_color').css({'background-color':'#'+config['uv_color']});
+
+    // update default isobaths colour:
+    $('#input_isobaths_color').val(config['isobaths_color']);
+    change_isobaths_color(config['isobaths_color']);
+    $('#input_isobaths_color').css({'background-color':'#'+config['isobaths_color']});
+    Init=0;
+  }
+
+  // update ...
+}
+
+function change_uv_color(cor){
+  $("[id*=currents]").children().css({'stroke':cor});
+}
+
+function change_isobaths_color(cor){
+  $("[id*=h_bathy]").children().css({'stroke':cor}); // lines
+  $("[id*=c_bathy]").css({'fill':cor});  // texts
+ // alert('updating isobaths '+cor);
+}
+
+    </script>
+
+
+<div style='font-size: 12px; font-family:"Helvetica, Verdana, Arial, sans-serif"; position: absolute; top: 80px; left: 10px; background-color: white; opacity:0.9; border-radius: 7px; box-shadow: 0px 0px 7px #888888; padding:10px'>
+<form>
+  fields:<br>
+  <input id=radioSalt  type="radio" name="field" value="salt"  style='cursor: pointer'  onclick='show_only("salt")'><label  style='cursor: pointer' for=radioSalt>Salinity</label><br>
+  <input id=radioTemp  type="radio" name="field" value="temp"  style='cursor: pointer'  onclick='show_only("temp")'><label style='cursor: pointer' for=radioTemp>Temperature</label><br>
+  <input id=radioSpeed type="radio" name="field" value="speed" style='cursor: pointer'  onclick='show_only("speed")'><label style='cursor: pointer' for=radioSpeed>Speed</label><br>
+  overlay:<br>
+  <input type="checkbox" name="vehicle" value="Car" style='cursor: pointer' onclick='show_hide("currents")'>currents<br>
+  <input type="checkbox" name="vehicle" value="Car" style='cursor: pointer' onclick='show_hide("wind")'>wind<br>
+  <input type="checkbox" name="vehicle" value="Car" style='cursor: pointer' onclick='show_hide("radar")'>radar<br>
+  <input type="checkbox" name="vehicle" value="Car" style='cursor: pointer' onclick='show_hide("buoys")'>buoys
+</form>
+</div>
+
+<div  style='border: 1px solid red; position: absolute; left: 320px; top: 410px; width:90px; height: 35px;  background-color: white; opacity:0.7; border-radius: 7px; box-shadow: 0px 0px 7px #888888;'>
+<svg id='currentsSvgScale' id='ckey0' height="20" width="100%">
+  <polygon id='ckey' points="00,10 100,10 90,5 100,10 90,15 100,10"
+        style="fill:lime;stroke:purple;stroke-width:1"
+        transform="scale(1) translate(5,0)"/>
+  <text x="50" y="30" 
+        font-family="Helvetica" 
+        font-size="10" text-anchor='middle'>
+        0.5 m s<tspan baseline-shift = "super">-1</tspan>
+  </text>
+</svg>
+</div>
+
+<div style='position: absolute; top: 400px; left: 450px; border: 1px solid red'>
+  <!--<object id='ckey' data="key_1.svg" type="image/svg+xml" style='width:200px'></object>-->
+  <object id='cbar' data="colorbars.svg" type="image/svg+xml" style='width:320px'></object>
+</div>
+
+
+<script>
+function show_config(val){
+  if (val){
+    $('#conf_panel').css({'display':'block'});
+  }else{
+    $('#conf_panel').css({'display':'none'});
+  }
+  //alert(val);
+}
+</script>
+<div style='position:absolute; top: 10px; left: 50px; width: 50px; background-color: white' onclick='show_config(1)'>config</div>
+<div id='conf_panel' style='padding: 5px; position:absolute; top: 10px; left: 50px; width: 250px; height: 150px; background-color: white; display:none'>
+     uv color: <input value='' id='input_uv_color' class="jscolor {closable:true,closeText:'ok'}" onchange="change_uv_color(this.jscolor)" style="width:60px; height:20px;">
+     <br>
+     isobaths color: <input value='' id='input_isobaths_color' class="jscolor {closable:true,closeText:'ok'}" onchange="change_isobaths_color(this.jscolor)" style="width:60px; height:20px;">
+
+    <br><br><br>
+    <button type="button" onclick="show_config(0)">done</button>
+</div>
+
+<!--
+  <div data-role="panel" id="myPanel">
+    <h2>Panel Header</h2>
+    <p>You can close the panel by clicking outside the panel, pressing the Esc key or by swiping.</p>
+  </div> 
+
+  <div data-role="header"  style='opacity:0'>
+    <h1>Page Header</h1>
+  </div>
+
+  <div data-role="main" class="ui-content">
+    <p>Click on the button below to open the Panel.</p>
+    <a href="#myPanel" class="ui-btn ui-btn-inline ui-corner-all ui-shadow">Open Panel</a>
+  </div>
+
+  <div data-role="footer" style='opacity:0'>
+    <h1>Page Footer</h1>
+  </div>
+</div>
+-->
+
+<script>
+
+//$('svg').on('load',window).load(function() {
+//  a=1;
+  //   alert('ok');
+  //show_onlyy('salt');
+//});
+
+</script>
+
+
+</body>
+</html>
