@@ -260,6 +260,33 @@ def thredds_model_frame(time_step):
     return jsonify(salt)
 	
 	
+
+# svg frame:
+@app.route('/data/svg/datetime/<string:datet>')
+def svg_frame(datet):
+#    datasource = request.args.get('datasource', 'hindcast')
+#    app.logger.info(datasource)
+#    fs = get_fs(datasource)
+    try:
+        #rs = fs.radar_frame(time_step)
+        #return jsonify_dict_of_array(rs)
+
+        Date=122
+        files='static/new_%s.svg'%Date,'static/new_%s.svg'%Date,None
+        info='analysis','forecast',None
+        Date=122,121,None
+        return jsonify(dict(filename=files,info=info,date=Date,next=None,prev=120))
+    except Exception as e:
+        msg = 'cannot access svg file for date %s'%datet
+        app.logger.error(msg)
+        app.logger.debug(str(e))
+        return make_response(msg, 404)
+
+@app.route('/data/gnome/<string:date0>/<string:date1>/<string:email>')
+def save_gnome(date0,date1,email):
+  return jsonify(dict(date0=date0,datet1=date1,email=email))
+
+
 def start(debug=True, host='127.0.0.1', port=5000):
     app.run(debug=debug, host=host, port=port)
 
