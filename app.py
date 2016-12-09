@@ -262,25 +262,80 @@ def thredds_model_frame(time_step):
 	
 
 # svg frame:
-@app.route('/data/svg/datetime/<string:datet>')
-def svg_frame(datet):
+@app.route('/data/svg/datetimes/<string:date0>/<string:date1>')
+def svg_dates(date0,date1):
+  import tools
+  t=tools.get_dates(date0,date1)
+
+#  if 1:
+#    for i in range(t.size):
+#      t[i]=t[i].strftime('%Y%m%d%H')
+
+  return jsonify(t.tolist())
+
+@app.route('/data/svg/colorbar/<string:date>')
+def svg_colorbars(date):
+  fname='figures/store/colorbars.svg'
+  #fname='static/colorbars.svg'
+  o={}
+  o['data']=open(fname).read()
+  return jsonify(o)
+
+@app.route('/data/svg/datetime/<string:datet>/<string:move>/<int:add>')
+def svg_frame(datet,move,add):
 #    datasource = request.args.get('datasource', 'hindcast')
 #    app.logger.info(datasource)
 #    fs = get_fs(datasource)
-    try:
+#    try:
+    if 1:
         #rs = fs.radar_frame(time_step)
         #return jsonify_dict_of_array(rs)
 
-        Date=122
-        files='static/new_%s.svg'%Date,'static/new_%s.svg'%Date,None
-        info='analysis','forecast',None
-        Date=122,121,None
-        return jsonify(dict(filename=files,info=info,date=Date,next=None,prev=120))
-    except Exception as e:
+#        Date=122
+#        files='static/new_%s.svg'%Date,'static/new_%s.svg'%Date,None
+#        info='analysis','forecast',None
+#        Date=122,121,None
+#        return jsonify(dict(filename=files,info=info,date=Date,next=None,prev=120))
+      import tools
+      if move=='more': add=+add
+      else: add=-add
+      if datet=='nearest':
+         o=tools.find_nearest(date=None,add=add)
+         o['data']=open(o['fname']).read()
+         return jsonify(o)
+      else:
+         o=tools.find_nearest(date=datet,add=add)
+         o['data']=open(o['fname']).read()
+         return jsonify(o)
+
+
+    else:
+#    except Exception as e:
         msg = 'cannot access svg file for date %s'%datet
         app.logger.error(msg)
         app.logger.debug(str(e))
         return make_response(msg, 404)
+
+@app.route('/data/svg/river/<int:year>/<int:month>')
+def svg_river(year,month):
+  f='figures/store/mississippi_%d_%02d.svg'%(year,month)
+  o={}
+  o['data']=open(f).read()
+  return jsonify(o)
+
+@app.route('/plot',methods=['POST','GET'])
+def plot():
+  print request.__dict__
+#   if request.method == 'POST':
+#      result = request.form
+#      return render_template("result.html",result = result)
+
+  print '================='
+  print request.form['city']
+  return str(request.__dict__)
+
+def save_gnome(date0,date1,email):
+  return jsonify(dict(date0=date0,datet1=date1,email=email))
 
 @app.route('/data/gnome/<string:date0>/<string:date1>/<string:email>')
 def save_gnome(date0,date1,email):

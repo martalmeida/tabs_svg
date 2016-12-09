@@ -1,0 +1,66 @@
+
+/*
+<html>
+<head>
+<script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+<script language=javascript>
+*/
+
+function Play(cid,acc){
+  var w=parseInt($('#'+cid).css('width').split('px')[0]);
+  var h=parseInt($('#'+cid).css('height').split('px')[0]);
+  var dx=10;
+  this.L=w-2*dx;
+  var oid='pmove';
+
+  var s=' \
+  <svg height="'+h+'" width="'+w+'" style="border:1px solid red"> \
+  <path style="fill: red; stroke: green" \
+    d="M'+dx+' '+h/2+' L'+(this.L+dx)+' '+h/2+'" /> \
+  <circle id="'+oid+'0" cx="'+dx+'" cy="'+h/2+'" r="5" fill="green"/> \
+  <circle id="'+oid+'1" cx="'+(this.L+dx)+'" cy="'+h/2+'" r="5" fill="green"/> \
+  <circle id="'+oid+'"  cx="'+dx+'" cy="'+h/2+'" r="7" fill="blue"/> \
+  </svg>';
+
+  $('#'+cid).html(s);
+
+  var self=this;
+  $('#'+cid).click(function(e){
+    var x = e.pageX - $(e.target).offset().left;
+    var y = e.pageY - $(e.target).offset().top;
+    var xm=$('#'+oid+'0').attr('cx');
+    var xM=$('#'+oid+'1').attr('cx');
+    x = x<xm ? xm:x;
+    x = x>xM ? xM:x;
+
+//    $('#'+oid).attr('cx',x);
+//    acc();
+    self.update(x/self.L*100);
+
+  });
+
+  this.update=function(p,evt){
+    $('#pmove').attr('cx',p/100*this.L+dx);
+    if (evt) // mouse click
+      acc();
+  };
+}
+
+/*
+$('#playCont').ready(function(){
+  play=new Play('playCont',function(){
+    alert('updatting...');
+
+  });
+});
+
+
+</script>
+
+</head>
+<body>
+<div id='playCont' style='width: 400px; border: 1px solid red; height: 50px'>
+</div>
+</body>
+</html>
+*/

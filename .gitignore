@@ -1,1 +1,5 @@
+*.swn
+*.swo
+*.swp
 *.pyc
+devel
