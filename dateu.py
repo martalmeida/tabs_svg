@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''dates utilities'''
 
+try: basestring
+except NameError: basestring=str # for python 3
+
 import datetime
 import operator
 

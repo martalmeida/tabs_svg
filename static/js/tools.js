@@ -164,3 +164,18 @@ function seta2d(x,y,u,v){
 
 }
 
+function mostCommon(list) {
+  var keyCounts = {};
+  var topCount = 0;
+  var topKey = {};
+  list.forEach(function(item, val) {
+    keyCounts[item] = keyCounts[item] + 1 || 1;
+    if (keyCounts[item] > topCount) {
+      topKey = item;
+      topCount = keyCounts[item];
+    }
+  });
+
+  return topKey;
+}
+

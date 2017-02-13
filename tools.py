@@ -4,7 +4,7 @@ import datetime
 import dateu
 import os
 
-def get_files(year=None):
+def get_files(year=None,pwd='./'):
 
   if year:
     try:
@@ -12,9 +12,9 @@ def get_files(year=None):
     except: year=[year,year]
 
     years='[%d-%d]'%(year[0]-1,year[1]+1)
-    files=glob.glob('figures/store/ready/%s/*[A,F].svg'%years)
+    files=glob.glob(pwd+'figures/store/ready/%s/*[A,F].svg'%years)
   else:
-    files=glob.glob('figures/store/ready/*[A,F].svg')
+    files=glob.glob(pwd+'figures/store/ready/*[A,F].svg')
 
   files.sort()
   times=np.zeros(len(files),datetime.datetime)
@@ -25,29 +25,29 @@ def get_files(year=None):
 
   return files,times
 
-def get_dates(date0,date1):
-  if date0+date1=='00': return get_files()[1]
+def get_dates(date0,date1,pwd='./'):
+  if date0+date1=='00': return get_files(pwd=pwd)[1]
   elif date0+date1=='01':
-    tmp=get_files()[1]
+    tmp=get_files(pwd=pwd)[1]
     return np.asarray((tmp[0],tmp[-1]))
 
   date0=dateu.parse_date(date0)
   date1=dateu.parse_date(date1)
 
   #files,times=get_files([date0.year,date1.year])
-  files,times=get_files()
+  files,times=get_files(pwd=pwd)
   i0=np.where(times>=date0)[0][0]
   i1=np.where(times<=date1)[0][-1]
   return times[i0:i1+1]
 
-def find_nearest(date=None,add=0):
+def find_nearest(date=None,add=0,pwd='./'):
   if not date:
     date=datetime.datetime.utcnow()
   else:
     date=dateu.parse_date(date)
 
   #files,times=get_files(date.year)
-  files,times=get_files()
+  files,times=get_files(pwd=pwd)
   d=np.abs(times-date)
   i=np.where(d==d.min())[0][0]
 
