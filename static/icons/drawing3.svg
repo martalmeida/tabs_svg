@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 744.09448819 1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   inkscape:export-filename="/home/mma/Documents/TABS/tabs_svg/tabs_svg/static/icons/buoy2_empty.png"
+   inkscape:export-xdpi="11.011364"
+   inkscape:export-ydpi="11.011364"
+   sodipodi:docname="drawing3.svg">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient5677"
+       osb:paint="solid">
+      <stop
+         style="stop-color:#8eb6ff;stop-opacity:1;"
+         offset="0"
+         id="stop5679" />
+    </linearGradient>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.02"
+     inkscape:cx="582.09868"
+     inkscape:cy="526.1811"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer4"
+     showgrid="true"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:window-width="1280"
+     inkscape:window-height="699"
+     inkscape:window-x="0"
+     inkscape:window-y="28"
+     inkscape:window-maximized="1">
+    <sodipodi:guide
+       position="78.048781,668.2927"
+       orientation="0,1"
+       id="guide3358" />
+    <sodipodi:guide
+       position="350.10409,787.30305"
+       orientation="1,0"
+       id="guide3369" />
+    <sodipodi:guide
+       position="540,580.00001"
+       orientation="1,0"
+       id="guide3371" />
+    <sodipodi:guide
+       position="450.13383,845.94118"
+       orientation="1,0"
+       id="guide3373" />
+    <sodipodi:guide
+       position="590,700.00001"
+       orientation="1,0"
+       id="guide3400" />
+    <sodipodi:guide
+       position="262.8,604.40001"
+       orientation="0,1"
+       id="guide5990" />
+    <inkscape:grid
+       type="xygrid"
+       id="grid6002" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Capa 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline">
+    <path
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#a2a6da;stroke-width:5.07124043;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 509.87058,498.66089 80.96229,156.09204 78.9632,-156.39327"
+       id="path6000"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-xdpi="11"
+       inkscape:export-ydpi="11" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:Sans;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#303477;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="591.92462"
+       y="496.73019"
+       id="text6019"
+       sodipodi:linespacing="125%"
+       inkscape:export-xdpi="11"
+       inkscape:export-ydpi="11"><tspan
+         sodipodi:role="line"
+         id="tspan6021"
+         x="591.92462"
+         y="496.73019"
+         style="font-size:112.5px;text-align:center;text-anchor:middle;fill:#303477;fill-opacity:1">R</tspan></text>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer4"
+     inkscape:label="Capa 4"
+     style="display:inline">
+    <rect
+       style="display:inline;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#a2a5da;stroke-width:5.18668699;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect3423"
+       width="284.23624"
+       height="125.23619"
+       x="447.72433"
+       y="409.24411"
+       ry="24.129389" />
+    <rect
+       style="display:inline;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#ffffff;stroke-width:4.42309284;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect3423-3"
+       width="257.37714"
+       height="100.57993"
+       x="461.82736"
+       y="421.87201"
+       ry="19.378836" />
+    <path
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#ffffff;stroke-width:2.97388077px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 532.14191,532.66238 115.81618,0 -10.52876,20.99964 -94.75866,0 z"
+       id="path4430"
+       inkscape:connector-curvature="0" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="Capa 3" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Capa 2"
+     style="display:inline" />
+</svg>

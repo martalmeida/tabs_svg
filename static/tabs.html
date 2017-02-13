@@ -43,7 +43,7 @@ html, body, #mapsWrapper { width:100%; height:800px; margin:0; padding:0; }
 .menu:hover{background-color: #f4f4f4; opacity:1;}
 
 #vars_btn {position:absolute; top: 100px; left: 10px;}
-#vars_panel{position: absolute; padding: 5px; top: 100px; left: 45px; width:130px; background-color: white; display:none;}
+#vars_panel{position: absolute; padding: 5px; top: 70px; left: 45px; width:130px; background-color: white; display:none;}
 
 
 #conf_btn {position:absolute; top: 300px; left: 10px;}
@@ -82,11 +82,18 @@ fnLoadMaps();
 function fnLoadMaps(){
 
     map = L.map('mapsWrapper', {fullscreenControl: true}).setView([28,-93], 7);
-    L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}', {
+    //L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}', {
+    L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
         maxZoom: 9,
         minZoom: 6
     }).addTo(map);
+    L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
+        maxZoom: 9,
+        minZoom: 6
+    }).addTo(map);
+
 
     d3.json("location2.json", function(geoShape) {
 
@@ -230,7 +237,6 @@ $(function() {
     });
 });
 </script>
-
 
 
 </body>

@@ -19,7 +19,7 @@ z
   </g>
   <g id="axes_1">
    <g id="patch_2">
-    <path clip-path="url(#ped3e8d117b)" d="M 139.924294 400.533105 
+    <path clip-path="url(#pddda900752)" d="M 139.924294 400.533105 
 L 139.042244 400.583088 
 L 138.160328 400.634528 
 L 137.280465 400.686717 
@@ -1746,19 +1746,19 @@ z
 " style="fill:#ffffff;opacity:0.3;"/>
    </g>
    <g id="frame_border">
-    <path clip-path="url(#ped3e8d117b)" d="M 0 432 
+    <path clip-path="url(#pddda900752)" d="M 0 432 
 L 495.085181 432 
 L 495.085181 0 
 L 0 0 
 L 0 432 
-" style="fill:none;stroke:#ffffff;stroke-linecap:square;"/>
+" style="fill:none;opacity:0.3;stroke:#ffffff;stroke-linecap:square;"/>
    </g>
    <g id="matplotlib.axis_1"/>
    <g id="matplotlib.axis_2"/>
   </g>
  </g>
  <defs>
-  <clipPath id="ped3e8d117b">
+  <clipPath id="pddda900752">
    <rect height="432.0" width="495.085181218" x="0.0" y="0.0"/>
   </clipPath>
  </defs>
