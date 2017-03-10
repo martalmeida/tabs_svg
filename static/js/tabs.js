@@ -18,9 +18,14 @@ function svg_scale(){
   return r=(h/H+w/W)/2;
 }
 
-function show_dialog(name){
+function show_dialog(name,forceValue){
   var ob=$('#'+name);
-  var disp=ob.css('display');
+
+  if (forceValue===undefined)
+    var disp=ob.css('display');
+  else if (forceValue) var disp='none';
+
+
   if (disp=='none'){
     ob.slideDown();
   }else{
@@ -45,9 +50,11 @@ function MASTER(){
   this.anim=new ANIM();
 
   this.conf_panel=new CONF_PANEL();
+  this.download_panel=new DOWNLOAD_PANEL();
 
   this.river=new RIVER();
 
+  this.logos=new Logos();
 
   var self=this;
 
@@ -96,7 +103,7 @@ function MASTER(){
         ymd0=date0.slice(0,4)+'-'+date0.slice(4,6)+'-'+date0.slice(6,8),
         ymd1=date1.slice(0,4)+'-'+date1.slice(4,6)+'-'+date1.slice(6,8);
 
-    $('#current_date').datepick('option', {'minDate':ymd0,'maxDate':ymd1});
+    $('#current_date_pick').datepick('option', {'minDate':ymd0,'maxDate':ymd1});
     $('#anim_panel_dates_input').datepick('option', {'minDate':ymd0,'maxDate':ymd1});
   }
 
@@ -242,12 +249,14 @@ function MASTER(){
 //    }
   }
 
-
   this.advance=function(evt,n){
 
     var date0=this.dates[this.iactual];
     if (date0===undefined) return // date0=this.all_times.slice(-1)[0]
     var date=this.next_date(date0,n);
+    if (date===undefined) return
+
+    //console.log('inside advance n='+n+' date='+date+' date0='+date0);
 
     if (date<=this.all_times[0]){
       $('#previous i').off('click')
@@ -274,8 +283,8 @@ function MASTER(){
   }
 
 
-  this.show_frame=function(i){
-    // also ass prev frame to FRAME.show function cos info
+  this.show_frame=function(i,check_date_selector){
+    // also add prev frame to FRAME.show function cos info
     // from prev may be needed (eg to be removed)
     var prevFrame=this.frames[this.iactual]; // undefined at start
 
@@ -292,10 +301,10 @@ function MASTER(){
     this.on_show_overlay('buoys','markers') // note that buoys markers (like isobaths) is not instance of
                                             // class OVERLAY, so this call just sets the checkbox
 
-    M.vars_panel.enable(1);
+    //M.vars_panel.enable(1); // this is currently never being disabled. So, no need to enable here!
     this.show_time(this.dates[this.iactual]);
-
     this.advance('evt',0); // set click events for time selector arrows
+
   }
 
 
@@ -340,9 +349,12 @@ function MASTER(){
 
     // show/hide scale:
     if (['currents','wind'].indexOf(vname) !== -1){ // isobaths is also an overlay !
-      if (vis)
-        M[vname+'_scale'].show();
-      else{
+      if (vis){
+        // show/update if not visible:
+        if (!M[vname+'_scale'].visible){ // this if needed otherwise update will occur for model/radar and buoys! Not need!
+          M[vname+'_scale'].show();
+        }
+      }else{
         // hide if not needed for other overlay!
         var cond1= ((vname=='currents')&!(frame.currents_model.visible | frame.currents_buoys.visible | frame.currents_radar.visible));
         var cond2= ((vname=='wind')&!(frame.wind_model.visible | frame.wind_buoys.visible));
@@ -379,8 +391,8 @@ function MASTER(){
   this.show_time=function(date){
     var ymd=date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8);
     var hh=date.slice(8,10)
-    $('#current_date').val(ymd);
-    $('#current_hour').val(hh+'h');
+    $('#current_date_pick').val(ymd);
+    $('#current_date').val(ymd+' '+hh+'h');
   }
 
 //  this.choose=function(vname,ob){
@@ -428,11 +440,16 @@ function MASTER(){
     var frame=this.frames[this.iactual]
     config[what+'_color'][field]=color;
 
-    if (frame.field_model.actual==field){
-      frame[what].set_color(color);
-      if (['currents','wind'].indexOf(what)>-1)
-      this[what+'_scale'].set_color(color);
-    }
+    // update new color now:
+    //if (frame.field_model.actual==field){
+    //  frame[what].set_color(color);
+    //  if (['currents','wind'].indexOf(what)>-1)
+    //  this[what+'_scale'].set_color(color);
+    //}
+    //
+    // better redraw the whole frame, cos for instance, scale color changes if there
+    // are model currents displayed, etc. So, it is easier to draw everything
+    this.show_frame(this.iactual);
   }
 
 }
@@ -485,13 +502,14 @@ function FRAME(date,svg,svg_data){
 
     // remove other stuff that may have been added.
     // Only buoys markers for now:
-    if (prevFrame!==undefined)
-    prevFrame.markers_buoys.hide();
+    if (prevFrame!==undefined){
+      if (prevFrame!=this)
+      prevFrame.markers_buoys.hide();
+    }
+
+
   }
 
-//  this.reset=function(){
-//    Reset(this.svg);
-//  }
 
   this.update_on_init=function(){
     // do at start only
@@ -680,6 +698,7 @@ function OVERLAY(svg,type,vname){
   }
 
   this.set_color=function(color){
+    if (!color.startsWith('rgb') && color[0]!='#') color='#'+color;
     $("[id^="+this.type+'_'+this.vname+"_frame]",this.svg).children().css({'stroke':color});
   }
 
@@ -744,10 +763,14 @@ function ISOBATHS(svg){
       // clabels font size:
       $("[id^=clab1_bathy_frame_"+zoom[i]+"]",this.svg).children().css({'font-size':fs});
       $("[id^=clab1_bathy_frame_"+zoom[i]+"]",this.svg).children().children().css({'font-size':fs});
+      // font: --> done in simplif.py
+      //$("[id^=clab1_bathy_frame_"+zoom[i]+"]",this.svg).children().css({'font-family':'sans-serif'});
+      //$("[id^=clab1_bathy_frame_"+zoom[i]+"]",this.svg).children().children().css({'font-family':'sans-serif'});
     }
   }
 
   this.set_color=function(color){
+    if (!color.startsWith('rgb') && color[0]!='#') color='#'+color;
     $("[id^=h_bathy_frame]",this.svg).children().css({'stroke':color});  // lines
     $("[id^=clab1_bathy_frame]",this.svg).css({'fill':color});           // texts
     $("[id^=clab1_bathy_frame]",this.svg).children().css({'fill':color});    // texts
@@ -772,6 +795,7 @@ function BUOYMarkers(frame,svg){
   this.markers=[];
   self=this;
 
+
   // create markers:
   var shadowUrl='https://unpkg.com/leaflet@1.0.2/dist/images/marker-shadow.png';
 
@@ -787,54 +811,93 @@ function BUOYMarkers(frame,svg){
   t0.setTime(t1.getTime() -  (duration * 24 * 60 * 60 * 1000));
   var trange=t0.getUTCFullYear()+'/'+t0.getUTCMonth()+'/'+t0.getUTCDate()+' - '+ t1.getUTCFullYear()+'/'+t1.getUTCMonth()+'/'+t1.getUTCDate();
 
+  // sort buoys as:
+  //   discontinued without data (dwd)
+  //   without data (wd)
+  //   with data (with)
+  buoysDWD=[]
+  buoysWD=[]
+  buoysWith=[]
   $('[id^=buoy_]',this.svg).each(function(j,i){
     if (i.id.split('_').length==2){
       var disc=parseInt(i.getAttribute('data-discontinued'));
-      //if (disc) return true; // means continue
+      var data=i.getAttribute('data-data');
+      if (disc & !data) buoysDWD.push(i)
+      else if (!data)   buoysWD.push(i)
+      else              buoysWith.push(i)
+    }
+  });
+  var buoysAll=buoysDWD.concat(buoysWD).concat(buoysWith)
+
+
+  //$('[id^=buoy_]',this.svg).each(function(j,i){
+  $(buoysAll).each(function(j,i){
+    if (i.id.split('_').length==2){
+      var disc=parseInt(i.getAttribute('data-discontinued'));
+      //if (disc) return true; // means continue  --> consider discontinued as buoy with no data? or use some different marker?
       var data0=i.getAttribute('data-data0');
       var data1=i.getAttribute('data-data1');
       var date1=i.getAttribute('data-date1');
       var data=i.getAttribute('data-data');
-      if (!data) return true; // means continue
+      // hide buoys with no data?
+      // if (!data) return true; // means continue
+      // better not show discontinued buoys only if they have no data:
+//      if (disc & !data) return true;
 
       var bname=i.id.split('_')[1];
       var type=i.getAttribute('data-type');
       var loc=i.getAttribute('data-location').split(' ');
       var lon=parseFloat(loc[0]);
       var lat=parseFloat(loc[1]);
-      console.log('buoy '+i+' '+j+' id='+i.id+' lon='+lon+' lat='+lat+' type='+type);
+//      console.log('buoy '+i+' '+j+' id='+i.id+' lon='+lon+' lat='+lat+' type='+type);
 
       if (data){
         var buoyName1='buoy.png';
         var buoyName2='buoy2.png';
       }else{
-        var buoyName1='buoy_empty.png';
-        var buoyName2='buoy2_empty.png';
+        if (disc){
+          var buoyName1='buoy_disc.png';
+          var buoyName2='buoy2_disc.png';
+        }else{
+          var buoyName1='buoy_empty.png';
+          var buoyName2='buoy2_empty.png';
+        }
       }
 
       if (type=='TABS'){
         var iw=22;
         var ih=35;
+        iw*=0.75;
+        ih*=0.75;
         var buoyName=buoyName1;
-        var style='font-size:12px;top:2px; width:'+iw+'px';
-        var shadowStyle='top:-3px';
+        //var style='font-size:12px;top:2px; width:'+iw+'px; margin-left:-1px;';
+        //var shadowStyle='top:-3px';
+        var style='font-size:10px;top:1px; width:'+iw+'px; margin-left:1px;';
+        var shadowStyle='top:0px; left:4px';
       }else{
         var iw=35;
         var ih=31;
+        iw*=0.75;
+        ih*=0.75;
         var buoyName=buoyName2;
-        var style='font-size:10px; letter-spacing: -1px;top:0px; width:'+iw+'px';
-        var shadowStyle='top:-9px;left:3px';
+        //var style='font-size:10px; letter-spacing: -1px;top:1px; width:'+iw+'px; margin-left:-1px;';
+        //var shadowStyle='top:-9px;left:3px';
+        var style='font-size:8px;top:1px; width:'+iw+'px; margin-left:0px;';
+        var shadowStyle='top:0px;left:4px';
       }
 
+      iw=Math.round(iw);
+      ih=Math.round(ih);
+
       var cIcon = L.divIcon({
-        iconSize: new L.Point(iw, ih),
+        //iconSize: new L.Point(iw, ih),
         className: 'Any!',
         iconAnchor: [iw/2,ih],
         html: ' \
            <div> \
-             <img src="'+shadowUrl+'" style="position: absolute;'+shadowStyle+'"> \
-             <img src="/static/icons/'+buoyName+'" style="position: absolute;top:0px"> \
-             <div style="'+style+'; margin-left:-1px; text-align: center; position: absolute;">'+bname+'</div>\
+             <img src="'+shadowUrl+'" width='+iw+' height='+ih+' style="position: absolute;'+shadowStyle+'"> \
+             <img src="'+tabs_icons_dir+'/'+buoyName+'" width='+iw+' height='+ih+' style="position: absolute;top:0px"> \
+             <div style="'+style+'; text-align: center; position: absolute;">'+bname+'</div>\
            </div>',
       });
       //buoy_info='<div style="overflow: auto; max-height: 150px">SOME info about the buoy !</div>';
@@ -842,20 +905,20 @@ function BUOYMarkers(frame,svg){
       var m=L.marker([lat,lon],{'icon': cIcon, 'riseOnHover': true});
       var table=type.toLowerCase();
 
-      // pupup with data links if TABS:
-      if (true){//(table=='tabs'){
+      // pupup with data links:
+      if (false){
         var d0=data0.split(';');
         var d1=data1.split(';');
         d=d1
         var s='';
         s+='<div style="width:170px">';
-        s+='<div style="font-weight:bold; width:100%; text-align:center">TABS buoy '+bname+'</div>';
+        s+='<div style="font-weight:bold; width:100%; text-align:center">'+type+' buoy '+bname+'</div>';
         s+='  <div style="float:left; width:130px">data available</div>';
         s+='  <div>latest</div>';
         s+='<hr>';
         var label,t,tall=[];
         for (var j=0; j<d.length; j++){
-          console.log(d[j])
+          //console.log(d[j])
           if (d[j]=='ven'){
              t=date1.split('ven=')[1].split(';')[0].split(' ')[1];
              label = ' &bull; Velocity data'; //Ocean (currents, etc)'
@@ -895,16 +958,25 @@ function BUOYMarkers(frame,svg){
         }
         s+='</div>';
         m.bindPopup(s,{'offset':new L.point(0,-25)});
-      }
 
+      }else{
 
-      m.on('click', function (e){
-
-      if (false){//(table=='ndbc'){
-          var url='http://pong.tamu.edu/tabswebsite/subpages/tabsquery.php?Buoyname='+bname+'&table='+table+'&Datatype=pic&tz=UTC&units=M&datepicker='+trange;
+        m.on('click', function (e){
+          if (table=='ndbc'){
+            var url='http://pong.tamu.edu/tabswebsite/subpages/tabsquery.php?Buoyname='+bname+'&table='+table+'&Datatype=pic&tz=UTC&units=M&datepicker='+trange;
+          }else{
+            var url='http://pong.tamu.edu/tabswebsite/subpages/tabsquery.php?Buoyname='+bname+'&table=ven&Datatype=pic&tz=UTC&units=M&datepicker='+trange;
+          }
           window.open(url, '_blank');
-        }
-      });
+        });
+      } // popup or direct link on click !
+
+      //m.setZIndexOffset(j-m._Zindex)
+      //m.setZIndexOffset(j)
+      if (disc & !data) m.setZIndexOffset(10)
+      else if (!data)   m.setZIndexOffset(20)
+      else              m.setZIndexOffset(30)
+
       self.markers.push(m);
     }
   });
@@ -1074,7 +1146,7 @@ var cIcon = L.divIcon({
     html: '<style>.buoyIcons{background-color: none}</style> \
            <div> \
              <img src="'+shadowUrl+'" style="position: absolute;top:-3px"> \
-             <img src="/static/icons/'+buoyName+'" style="position: absolute;top:0px">'+c1+c2+c3+c4+' \
+             <img src="'+tabs_icons_dir+'/'+buoyName+'" style="position: absolute;top:0px">'+c1+c2+c3+c4+' \
              <div style="text-align: center; position: absolute; width: 22px; top:2px">'+i.id[5]+'</div>\
              '+c1+c2+c3+c4+' \
            </div>',
@@ -1112,42 +1184,53 @@ function VFieldScale(vname){
   }else if (vname=='wind'){
     var left=230;
     var label='5 m s';
-     var ytext=33;
+     var ytext=32;
   }
 
-  var s=' \
+  var s0=' \
   <style> \
     #'+vname+'SvgScale0 { \
-      position: absolute; left: '+left+'px; top: 410px; width:80px; height: 35px; border: 0px solid green; \
-      background-color: white; border-radius: 7px; box-shadow: 0px 0px 7px #888888; \
-      display:none; opacity:0.8; \
+      position: absolute; left: '+left+'px; top: 410px; width:80px; height: 35px;\
+      background-color: '+config.color_out+'; border-radius: 7px; box-shadow: 0px 0px 7px #888888; \
+      display:none; opacity:'+config.alpha_out+'; \
       z-index:1000\
     } \
     #'+vname+'SvgScale { \
-      position: absolute; left: '+left+'px; top: 410px; width:80px; height: 35px; border: 0px solid red; \
+      position: absolute; left: '+left+'px; top: 410px; width:80px; height: 35px;\
       display:none; \
       z-index:1000\
     } \
     #'+vname+'ScaleLabel { \
       fill:black; font-family:Helvetica; font-size:11px; text-anchor:middle; \
     } \
-  </style> \
-  \
+  </style>';
+
+  var s1='\
   <div id="'+vname+'SvgScale0"></div> \
   <div id="'+vname+'SvgScale"> \
-    <svg style="width:100%;height:100%"> \
+    <svg width="80" height="35" Sstyle="width:100%;height:100%"> \
       <polygon id="'+vname+'Scale" points="00,00 00,00" \
         style="stroke:black;stroke-width:1;fill:none" \
         transform="scale(1) translate(5,0)"/> \
       <text id="'+vname+'ScaleLabel" x="40" y="'+ytext+'"> \
-        '+label+' <tspan baseline-shift = "super">-1</tspan> \
+        '+label+' <tspan dy="-5" style="font-size:70%">-1</tspan> \
       </text> \
     </svg> \
   </div> \
   ';
 
-  $('#mapsWrapper').append(s);
-  //$('body').append(s);
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
+
+  // simulate menu:hover class:
+  $('#'+vname+'SvgScale')
+    .mouseover(function(){
+      $('#'+vname+'SvgScale0').css({opacity:config.alpha_over,'background-color': config.color_over});
+    })
+    .mouseout(function(){
+      $('#'+vname+'SvgScale0').css({opacity:config.alpha_out,'background-color': config.color_out});
+    });
+
 
   this.show=function(svg){
     // svg input needed for update only!
@@ -1214,7 +1297,7 @@ function VFieldScale(vname){
   }
 
   this.set_color=function(color){
-    //$('#'+vname+'Scale').css({'stroke':color});
+    if (!color.startsWith('rgb') && color[0]!='#') color='#'+color;
     $('#'+vname+'Scale').css({'stroke':color});
   }
 
@@ -1226,12 +1309,12 @@ function COLORBAR(){
   this.field='';
   this.layer=null;
 
-  var s=' \
+  var s0=' \
   <style> \
     #cbarDiv0 { \
       position: absolute; width:368px; height: 55px; top: 400px; left: 420px; border: 0px solid green; \
-      background-color: white; border-radius: 7px; box-shadow: 0px 0px 7px #888888; \
-      display:none; opacity:0.8;\
+      background-color: '+config.color_out+'; border-radius: 7px; box-shadow: 0px 0px 7px #888888; \
+      display:none; opacity:'+config.alpha_out+'; \
       z-index:1000\
     } \
     #cbarDiv { \
@@ -1249,8 +1332,9 @@ function COLORBAR(){
       position: absolute; top:21px; right: 5px; font-size: 10px; color:#002266 \
       display:none; \
     } \
-  </style> \
-  \
+  </style>';
+
+  var s1='\
   <div   id="cbarDiv0"> \
     <i   id="fieldLayer_up"    class="fa fa-arrow-circle-up fa-1"></i> \
     <div id="fieldLayer_num"></div> \
@@ -1259,8 +1343,18 @@ function COLORBAR(){
   <div id="cbarDiv"></div> \
   ';
 
-  $('#mapsWrapper').append(s);
-  //$('body').append(s);
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
+
+
+  // simulate menu:hover class:
+  $('#cbarDiv')
+    .mouseover(function(){
+      $('#cbarDiv0').css({opacity:config.alpha_over,'background-color': config.color_over});
+    })
+    .mouseout(function(){
+      $('#cbarDiv0').css({opacity:config.alpha_out,'background-color': config.color_out});
+    });
 
   var self=this;
   $('#fieldLayer_up').click(function(){
@@ -1361,61 +1455,302 @@ function CONF_PANEL(){
   this.enabled=true;
   this.visible=false;
 
-  var vars=['Currents','Wind','Isobaths','Radar'];
+  var vars=['Currents','Wind','Radar','Buoys', 'Isobaths'];
+  var vars2=['Model currents','Model wind','Radar currents','Buoys currents/wind','Isobaths'];
   var vars_field=['salt','temp','speed','none'];
+  var vars_field2=['Salinity','Temp.','Speed','none'];
 
-  s='\
+  s0='\
   <style> \
+    #conf_btn {position:absolute; top: 150px; left: 10px;cursor:pointer}\
+    #conf_panel{position: absolute; padding: 5px; top: 150px; left: 45px; width:260px; display:none;}\
     #conf_panel input { \
-      width:33px;font-size:8px; border:1px solid black;display:inline; font-family:"Courier New", Courier, monospace; \
+      border-radius: 2px; width:33px;font-size:8px; margin: 1px; border:1px solid black;display:inline; font-family: monospace; \
     } \
-  </style> \
-  \
+  </style>';
+
+  var s1='\
   <div id="conf_btn" class="menu"><i class="fa fa-cog fa-lg"></i></div> \
-  <div id="conf_panel" class="menu" > \
-    Colours for:';
+  <div id="conf_panel" class="menu"> \
+    Colors for:\
+    \
+    <div style="width: 100%; display: table; font-size: 10px"> \
+      <div style="display: table-row;">\
+        <div style="display: table-cell;">&nbsp;</div>';
+
+    for (j=0;j<vars_field.length;j++){
+      s1+='    <div style="display: table-cell; text-align:center;">'+vars_field2[j]+'</div>';
+    }
+    s1+='  </div>';
+
 
     for (var i=0; i<vars.length;i++){
-      s+='  <div style="margin:5px;">'
-      s+='    '+vars[i]+':';
-      s+='    <div style="float:right">';
+      s1+='  <div style="display: table-row; border: 1px solid red;">'
+      s1+='    <div style="display: table-cell;">'+vars2[i]+':</div>';
 
       for (j=0;j<vars_field.length;j++){
         var color=config[vars[i].toLowerCase()+'_color'][vars_field[j]];
         var fg=hex_isLight(color) ? '#000' : '#FFF';
-        s+='    <input value="'+color+'" id="input_'+vars[i].toLowerCase()+'_color_'+vars_field[j]+'" \
+        s1+='    <div style="display: table-cell; text-align:center;"><input value="'+color+'" id="input_'+vars[i].toLowerCase()+'_color_'+vars_field[j]+'" \
             style="color:'+fg+'; background-color:#'+color+'" \
-            class="jscolor {closable:true,closeText:\'ok\'}" onchange=\'M.change_color("'+vars[i].toLowerCase()+'","'+vars_field[j]+'",this.jscolor)\'>';
+            class="jscolor" onchange=\'M.change_color("'+vars[i].toLowerCase()+'","'+vars_field[j]+'",this.style.backgroundColor)\'></div>';
       }
-      s+='    </div>';
-      s+='  </div>';
+      s1+='  </div>'; // end of table row
     }
+    s1+='</div>'; // end of table
 
-  s+='\
-    <br> \
-    <button style="margin:5px;" type="button" class="btn">done</button> \
-  </div>\
-  ';
+//  s+='\
+//    <br> \
+//    <button style="margin:5px;" type="button" class="btn">done</button> \
+//  </div>\
+//  ';
+  s1+='<br></div>';
 
-  $('#mapsWrapper').append(s);
-  //$('body').append(s);
+
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
 
   var self=this;
-  $('#conf_btn').click(function(){
-    self.toggle();
+
+
+  $('#conf_panel').ready(function(){
+    $(".jscolor").each(function (i, obj) {
+        var picker = new jscolor(obj,{'closable':true,'closeText':'ok'});
+    });
   });
 
-  $('#conf_panel button').click(function(){
-    self.toggle();
+  $('#conf_btn').click(function(e){
+    self.toggle(e);
   });
 
 
-  this.toggle=function(){
-    this.visible=show_dialog('conf_panel')
+//  $('#conf_panel button').click(function(e){
+//    self.toggle(e);
+//  });
+
+  this.show=function(e){
+      e.stopPropagation();
+      $(document).bind( "click",self.hide);
+      show_dialog('conf_panel',1);
+      this.visible=true;
+  }
+
+  this.hide=function(e){
+      // check if clicked inside conf_panel:
+      cond=$(e.target).parents('#conf_panel').length>0 || e.target.id=='conf_panel' || $(e.target).parents('#pickerBaseDiv').length>0;
+      if (!cond){
+        $(document).unbind( "click",self.hide);
+        show_dialog('conf_panel',0);
+        self.visible=false;
+      }
+  }
+
+  this.toggle=function(e){
+    //this.visible=show_dialog('conf_panel')
+    if (this.visible) this.hide(e)
+    else this.show(e)
   }
 
 }
 
+function DOWNLOAD_PANEL(){
+  s0='\
+  <style> \
+    #download_btn {position:absolute; top: 180px; left: 10px; cursor:pointer} \
+    #download_panel{position: absolute; padding: 5px; top: 180px; left: 45px; width:180px; \
+      z-index: 1000; display: none;}\
+    #download_frame {cursor:pointer; display:table}\
+    #download_anim {cursor:pointer; display:table}\
+  </style>';
+
+  var s1='\
+  <div id="download_btn" class="menu"><i class="fa fa-download fa-lg"></i></div> \
+  <div id="download_panel" class="menu">\
+    <p>Download</p>\
+    <div id="download_frame">\
+      <img src="'+tabs_icons_dir+'/Under_construction_icon-green_.png"> - current frame <img src="'+tabs_icons_dir+'/Under_construction_icon-green_.png">\
+    </div><br> \
+    <div id="download_anim">\
+      <img src="'+tabs_icons_dir+'/Under_construction_icon-green_.png"> - latest animation <img src="'+tabs_icons_dir+'/Under_construction_icon-green_.png">\
+    </div><br> \
+  </div>\
+  ';
+
+  // PS: display: table makes the (clicable) div no larger than its contents.
+
+
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
+
+  var self=this;
+
+  $('#download_btn').click(function(e){
+    self.toggle(e);
+  });
+
+
+  $('#download_frame').click(function(e){
+//    self.download();
+  });
+
+  $('#download_anim').click(function(e){
+//    self.download_anim();
+  });
+
+
+  this.show=function(e){
+      e.stopPropagation();
+      $(document).bind( "click",self.hide);
+      show_dialog('download_panel',1);
+      this.visible=true;
+  }
+
+  this.hide=function(e){
+    // check if clicked inside download_panel:
+    cond=$(e.target).parents('#download_panel').length>0 || e.target.id=='download_panel';
+    if (!cond){
+      $(document).unbind( "click",self.hide);
+        show_dialog('download_panel',0);
+        self.visible=false;
+      }
+  }
+
+  this.toggle=function(e){
+    if (this.visible) this.hide(e)
+    else this.show(e)
+  }
+
+  function hide4snapshot(){
+    $(".leaflet-control-zoom.leaflet-bar.leaflet-control").hide();
+    //$("#date_selector").hide();
+    $("#date_selector").children("div:not(#anim_panel,#anim_background)").hide();
+    $("#current_date").show();
+    $("#current_hour").show();
+    $('[id*="btn"]').hide();
+    $("#vars_panel").hide();
+    $("#gloLogo").show();
+    $("#gergLogo").show();
+  }
+
+  function show4snapshot(){
+    $(".leaflet-control-zoom.leaflet-bar.leaflet-control").show();
+    //$("#date_selector").show();
+    $("#date_selector").children("div:not(#anim_panel,#anim_background)").show();
+    $('[id*="btn"]').show();
+    $("#vars_panel").show();
+    $("#gloLogo").hide();
+    $("#gergLogo").hide();
+  }
+
+  this.download_anim=function(){
+    console.log('NOT READY YET !!')
+  }
+
+  this.download=function(){
+    var date=M.dates[M.iactual];
+    if (date) fsave='tabs_frame_'+date+'.png';
+    else fsave='tabs_current_frame.png';
+
+
+    var svgElements = $("#mapsWrapper").find('svg');
+    svgElements.each(function() {
+//      var canvas, xml;
+      // replace viewBox when style exists
+      if($(this)[0].style['left'] || $(this)[0].style['top']) {
+        var top = $(this)[0].style['top'] ? parseInt($(this)[0].style['top']) : 0;
+        var left = $(this)[0].style['left'] ? parseInt($(this)[0].style['left']) : 0;
+        var baseleft = $(this)[0].viewBox.baseVal.x;
+        var basetop = $(this)[0].viewBox.baseVal.y;
+
+        $(this)[0].style['left']=0;
+        $(this)[0].style['top']=0;
+        $(this)[0].viewBox.baseVal.x = baseleft - parseInt(left*($(this)[0].viewBox.baseVal.width/$(this)[0].width.baseVal.value));
+        $(this)[0].viewBox.baseVal.y = basetop - parseInt(top*($(this)[0].viewBox.baseVal.height/$(this)[0].height.baseVal.value));
+      }
+
+      //$.each($(this).find('[style*=px]'), function(index, el) {
+      //  $(this).css('font-size', getStyle(el, 'font-size'));
+      //});
+
+      // canvg doesn't cope very well with em font sizes so find the calculated size in
+      // pixels and replace it in the element.
+      $.each($(this).find('[style*=em]'), function(index, el) {
+        $(this).css('font-size', getStyle(el, 'font-size'));
+      });
+
+      canvas = document.createElement("canvas");
+      canvas.className = "screenShotTempCanvas";
+      //convert SVG into a XML string
+      xml = (new XMLSerializer()).serializeToString(this);
+
+      // Removing the name space as IE throws an error
+      xml = xml.replace(/xmlns=\"http:\/\/www\.w3\.org\/2000\/svg\"/, '');
+
+      //draw the SVG onto a canvas
+      canvg(canvas, xml);
+      $(canvas).insertAfter(this);
+
+      //hide the SVG element
+      $(this).attr('class', 'tempHide');
+      $(this).hide();
+    });
+
+    hide4snapshot();
+    html2canvas($("#mapsWrapper"), {
+            allowTaint : false,
+            logging : true,
+            taintTest: false,
+            useCORS: true,
+            letterRendering: true,
+            onrendered: function(canvas) {
+              if (navigator.userAgent.indexOf('MSIE')>0 || navigator.userAgent.match(/Trident.*rv\:11\./)){
+                var blob = canvas.msToBlob();
+                window.navigator.msSaveBlob(blob,fsave);
+              }
+              else{
+                canvas.toBlob(function(blob) {
+                  saveAs(blob,fsave);
+                });
+              }
+            }
+    });
+    show4snapshot();
+    $("#mapsWrapper").find('.screenShotTempCanvas').remove();
+    $("#mapsWrapper").find('.tempHide').show().removeClass('tempHide');
+  }
+
+
+
+            //
+
+            //                    // canvg doesn't cope very well with em font sizes so find the calculated size in pixels and replace it in the element.
+            //                              $.each($(this).find('[style*=em]'), function(index, el) {
+            //                                          $(this).css('font-size', getStyle(el, 'font-size'));
+            //                                                    });
+            //
+//
+//    html2canvas($("#mapsWrapper0"), {
+/*            allowTaint : false,
+            logging : true,
+            taintTest: false,
+            useCORS: true,
+
+            onrendered: function(canvas) {
+                canvas.toBlob(function(blob) {
+                    saveAs(blob,fsave);
+                });
+            }
+    });
+  }
+*/
+//  $('#conf_btn').click(function(e){
+//    self.toggle(e);
+//  });
+//
+//  }
+
+
+}
 
 function VARS_PANEL(){
   this.enabled=true;
@@ -1424,22 +1759,25 @@ function VARS_PANEL(){
   var vars_field=['salt','temp','speed','none'];
   var vars_field_names=['Salinity','Temperature','Speed','none'];
 
-  s='\
+  var s0='\
   <style> \
-  </style> \
-  \
+    #vars_btn {position:absolute; top: 100px; left: 10px; cursor:pointer}\
+    #vars_panel{position: absolute; padding: 5px; top: 90px; left: 45px; width:130px; display:none;}\
+  </style>';
+
+  var s1='\
   <div id="vars_btn" class="menu"><i class="fa fa-list-alt fa-lg"></i></div> \
   <div id="vars_panel" class="menu"> \
     <div style="background-color:#dce7f7;border-radius: 4px;"> \
       <strong>fields:</strong><br>';
-      s+='      <form>';
+      s1+='      <form>';
       for (var i=0;i<vars_field.length;i++){
-        s+='      <input id="radio_'+vars_field[i]+'_model" name="field" type="radio" value="'+vars_field[i]+':model"  style="cursor: pointer" \
+        s1+='      <input id="radio_'+vars_field[i]+'_model" name="field" type="radio" value="'+vars_field[i]+':model"  style="cursor: pointer" \
            onclick="M.choose(this)"><label style="cursor: pointer"  for="radio_'+vars_field[i]+'_model">'+vars_field_names[i]+'</label><br>';
       }
-      s+='      </form>';
+      s1+='      </form>';
 
-      s+='\
+      s1+='\
       <hr> \
       <strong>overlay:</strong><br> \
       <input id="checkbox_currents_model" type="checkbox" value="currents:model" style="cursor: pointer" onclick="M.choose(this)"><label style="cursor: pointer"  for=checkbox_currents_model>currents</label><br> \
@@ -1455,6 +1793,7 @@ function VARS_PANEL(){
          <input id="checkbox_currents_buoys" type="checkbox" value="currents:buoys" style="cursor: pointer" onclick="M.choose(this)">currents <br>\
          <input id="checkbox_wind_buoys"     type="checkbox" value="wind:buoys"     style="cursor: pointer" onclick="M.choose(this)">wind <br>\
          <input id="checkbox_markers_buoys"  type="checkbox" value="markers:buoys"   style="cursor: pointer" onclick="M.choose(this)">markers \
+         <i id="buoy_markers_panel_help_btn" class="fa fa-question-circle fa"></i>\
       </div> \
     </div> \
     <!--<input id="checkbox_buoys_curr"    type="checkbox" value="buoys_curr" style="cursor: pointer" onclick="M.choose(this)">buoys: currents<br> \
@@ -1462,12 +1801,37 @@ function VARS_PANEL(){
     --><hr> \
     <strong>aux:</strong><br> \
     <input id="checkbox_isobaths_model" type="checkbox"  value="isobaths:model" style="cursor: pointer" onclick="M.choose(this)"><label style="cursor: pointer"  for=checkbox_isobaths_model>isobaths</label><br> \
-    <input id="checkbox_river"    type="checkbox"  style="cursor: pointer" onclick="M.river.show()"><label style="cursor: pointer"  for=checkbox_river>river</label><br> \
+    <!--<input id="checkbox_river"    type="checkbox"  style="cursor: pointer" onclick="M.river.show()"><label style="cursor: pointer"  for=checkbox_river>river</label><br>--> \
   </div>\
   ';
 
-  $('#mapsWrapper').append(s);
-  //$('body').append(s);
+
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
+
+
+  //-----------------------------------
+  // Buoy Markers help:
+  var style='style="font-size: 12px;display: none; position: absolute; top:200px;left:195px;width:200px" class="menu"';
+  var html='<p>Buoy\'s Markers Help</p>\
+            There are two types of buoys:\
+            <div>TABS <img src="'+tabs_icons_dir+'/buoy.png" width=16.5 height=26.25> and \
+            NDBC <img src="'+tabs_icons_dir+'/buoy2.png" width=26.25 height=23.25> \
+            </div>\
+            The color indicates the buoy/data status at selected date:\
+            <ul>\
+              <li>pink - buoy is discontinued and has no data</li>\
+              <li>white - buoy has no data</li>\
+              <li>blue - buoy has data</li>\
+            </ul>\
+            <div>By clicking in the markers you will be redirected to the buoys data query site</div>\
+            <br>';
+  this.help=new PANEL('buoy_markers_panel_help_btn','buoy_markers_help',html,style);
+  $('#buoy_markers_panel_help_btn').css({'color':'#98bccf','cursor':'pointer'});
+  //-----------------------------------
+
+
+
 
   var self=this;
   $('#vars_btn').click(function(){
@@ -1499,46 +1863,56 @@ function VARS_PANEL(){
 
 function DATE_SELECT(){
 
-  s=' \
+  var s0=' \
   <style> \
     #date_selector { \
       width: 230px; text-align:center; \
+      position: absolute; top: 10px; left: 500px;\
     } \
     #current_date { \
-      width: 80px; text-align:center; border: 0px solid #cccccc; border-right:0px; \
+      width: 100px; text-align:center; border: 1px solid #cccccc; Bborder-right:0px; \
     } \
-    #current_hour { \
-      width: 24px; text-align:center; border: 0px solid #cccccc; border-left:0px; \
-      position: relative; right: 20px; \
-    } \
-    #date_selectorHide { \
-      width: 190px; background-color: white; opacity:0.6; padding: 4px 5.5px;border-radius: 4px; \
-      display:none; \
-      z-index:1000; \
-    } \
+/*    #current_hour { \
+      width: 24px; text-align:center; border: 1px solid #cccccc; Bborder-left:0px; \
+      position: relative; left: 80px; \
+    }*/ \
     #anim_btn { \
-      color:#9d0202; margin-left:10px\
+      color:#9d0202; margin-right:10px\
     } \
-  </style> \
-  \
+  </style>';
+
+  var s1='\
   <div id="date_selector" class="menu"> \
-    <div id="previous" class="item_selector"><i class="fa fa-step-backward fa-lg"></i></div> \
-    <input id="current_date" readonly> \
-    <input id="current_hour" readonly> \
-    <div id="next" class="item_selector"><i class="fa fa-step-forward fa-lg"></i></div> \
-    <div id="anim_btn" class="item_selector"><i class="fa fa-play-circle-o fa-lg" onclick="M.anim.show_dialog()"></i></div> \
-  </div> \
-  \
-  <div id="date_selectorHide">&nbsp;</div> \
-  <div style="display: none"> \
-    <img style="position: relative; right: -28px; top: 3px;" id="calImg"  src="js/date_picker/calendar-blue.gif" class="trigger"> \
+\
+      <div>\
+        <div style="float: left;">\
+          <div style="display: table-cell; width: 20px" id="previous"><i class="fa fa-step-backward fa-lg"></i></div> \
+          <div style="display: table-cell">\
+            <input id="current_date" style="background-color: transparent;border: 1px solid #cccccc; border-radius: 3px" readonly> \
+          </div>\
+          <div style="display: table-cell; width: 20px" id="next"><i class="fa fa-step-forward fa-lg"></i></div> \
+        </div>\
+\
+        <div style="float: left; width: 40px"> \
+          <input style="border:0px; width:0px" id="current_date_pick"  readonly> \
+        </div> \
+\
+        <div style="float:right" id="anim_btn"><i style="cursor:pointer;position" class="fa fa-play-circle-o fa-lg" onclick="M.anim.show_dialog()"></i></div> \
+        &nbsp;\
+      </div>\
+\
+      <div style="display: none"> \
+        <img id="calImg"  style="cursor:pointer;position: relative; top: 2px;" src="js/date_picker/calendar-blue.gif" class="trigger"> \
+      </div> \
+\
+      <div id="date_selector_anim"></div> \
   </div> \
   ';
 
-  $('#mapsWrapper0').append(s);
-  //$('#mapsWrapper').append(s);
-  //$('body').append(s);
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
 
+/*
   $('#date_selector')
     .on('mouseover',function(){
       $(this).find('*').css({'background-color':$(this).css('background-color')});
@@ -1546,18 +1920,26 @@ function DATE_SELECT(){
     .on('mouseout',function(){
       $(this).find('*').css({'background-color':$(this).css('background-color')});
     });
-
+*/
 
   // show date picker:
   // allow more 7 days from today:
   var maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 7);
   var maxDateStr =format_date(maxDate)[1].split(' ')[0];
-  $('#current_date').datepick({showOnFocus: false, showTrigger: '#calImg',
-  minDate: '2010-01-01', maxDate: maxDateStr,
+  $('#current_date_pick').datepick({showOnFocus: false, showTrigger: '#calImg',
+  minDate: config.date_min, maxDate: maxDateStr,
   dateFormat: 'yyyy-mm-dd',
     onSelect: function(date) {
-       date=format_date(new Date(date))[0].slice(0,8)+$('#current_hour').val().slice(0,2);
+
+       // get hour:
+       var hour=$('#current_date').val().split(' ')
+       if (hour.length>1) hour=hour[1].slice(0,2);
+       else hour='00';
+
+       date=format_date(new Date(date))[0].slice(0,8)+hour;//+$('#current_hour').val().slice(0,2);
+///       $('#current_date').val(date);
+///       alert(date);
        M.load_date(date,true);
       }
   });
@@ -1574,14 +1956,14 @@ function ANIM(){
 
   var self=this
 
-  s=' \
+  var s0=' \
   <style> \
     #anim_panel { \
-      padding-top:2px; padding-bottom:3px; height:60px; \
-      display:none \
+      padding-top:10px; padding-bottom:3px; height:60px; \
+      display: none;\
     } \
     #anim_panel_info0 { \
-      text-align: left; Hheight:10px;\
+      text-align: left;\
     } \
     #anim_panel_help_btn { \
       color:#98bccf; cursor:pointer \
@@ -1590,41 +1972,50 @@ function ANIM(){
       font-size:11px;display:inline \
     } \
     #playCont { \
-      height:20px; width: 200px; margin-bottom: 5px \
+      height:20px; width: 200px; margin-bottom: 5px; float: left \
     } \
     #anim_panel_info2 { \
-      z-index: 11; position: absolute; width: 70%; background-color:white \
-    } \
-    #anim_panel_dates_inputDiv { \
-      z-index: 10; position: absolute; width: 70%; height:10px \
+      width: 77%; float:left;\
     } \
     #anim_panel_dates_input { \
-      border:0px;  background-color:transparent \
-    } \
-    #anim_panel_okLoad { \
-      z-index: 12; position: absolute; width: 30%; left:70%; \
-      display:none; cursor:pointer \
+      width:0px; border:0px; \
     } \
     #anim_panel_okLoadi { \
       background-color: #bfc8d6; margin-top: 2px;padding: 2px 3px 0px 3px; border: 1px solid #a3acb8; border-radius: 3px; \
+      cursor: pointer;\
     } \
-  </style> \
-  \
+  </style>';
+
+  var s1='\
   <div id="anim_panel"> \
     <div id="anim_panel_info0"><i id="anim_panel_help_btn" class="fa fa-question-circle fa"></i><div id="anim_panel_info1"></div></div> \
-    <div id="playCont"></div> \
+    <div>\
+      <div id="playCont"></div> \
+      <div><input id="anim_panel_dates_input"></div>\
+    </div>\
     <div id="anim_panel_info2">&nbsp;</div> \
-    <div id="anim_panel_dates_inputDiv"><input id="anim_panel_dates_input"></div> \
     <div id="anim_panel_okLoad"><i id="anim_panel_okLoadi" class="fa fa-download fa-1"> load</i></div> \
-    <div>&nbsp;</div> \
   </div> \
   <div style="display:none"> \
-    <img style="position: relative; right: -130px; top: -42px;" id="calImg2" src="js/date_picker/calendar-blue.gif" class="trigger"> \
+    <img style="cursor:pointer;position;position: relative; top: 2px;" id="calImg2" src="js/date_picker/calendar-blue.gif" class="trigger"> \
   </div> \
   ';
 
-  $('#date_selector').append(s);
+  $('head').append(s0);
+  $('#date_selector_anim').append(s1);
 
+  // anim help panel:
+  var style='style="font-size: 12px;display: none; position: absolute; top:50px;left:280px;width:200px" class="menu"';
+  var html='<p>Animations Help</p>\
+            1. select two dates in the calendar at right<br> \
+            2. click to load the frames<br> \
+            3. play<br> \
+            <img align="right" src="'+tabs_images_dir+'/ahelp.png"><br>\
+            <!--(use <i class="fa fa-play-circle-o fa-lg"></i> to show/hide the animation options)-->';
+  this.help=new PANEL('anim_panel_help_btn','anim_help',html,style);
+
+
+  /*
   $('#anim_panel_help_btn').click(function(){
     if ($('#anim_panel_info1').html()){
       $('#anim_panel_info1').html('');
@@ -1635,6 +2026,7 @@ function ANIM(){
       $(this).css({color:'#bfc8d6'});
     }
   });
+  */
 
   // show player:
   play=new Play('playCont',0,function(i){
@@ -1658,17 +2050,19 @@ function ANIM(){
   dateFormat: 'yyyy-mm-dd',
   rangeSelect: true,
   onClose: function(dates) {
-    if (dates[1].getTime()==dates[0].getTime()){
-        var date0 =format_date(dates[0])[0].slice(0,8);
+    if (dates!=''){
+      if (dates[1].getTime()==dates[0].getTime()){
+          var date0 =format_date(dates[0])[0].slice(0,8);
 
-        // add one day to final date
-        var date1=dates[1];
-        date1.setDate(date1.getDate() + 1);
-        var date1 =format_date(date1)[0].slice(0,8);
+          // add one day to final date
+          var date1=dates[1];
+          date1.setDate(date1.getDate() + 1);
+          var date1 =format_date(date1)[0].slice(0,8);
 
-        self.choose_dates(date0,date1)
+          self.choose_dates(date0,date1)
+      }
+      play.update_n(0);
     }
-    play.update_n(0);
   },
   onSelect: function(dates) {
       if (dates[1]>dates[0]){
@@ -1692,11 +2086,12 @@ function ANIM(){
   this.show_dialog=function(){
     var ob=$('#anim_panel');
     if (ob.css('display')=='none'){
-      $("#anim_panel").children().hide();
+      $('#anim_panel').fadeIn(250);;
       $("#anim_panel").children().fadeIn(500);
-      $("#anim_panel").fadeIn(500);
       $('#anim_btn').css({'color':'#396fc2'});
-      $('#date_selectorHide').show();
+      $('#date_selector #previous i').hide()
+      $('#date_selector #next i').hide()
+      $('#date_selector .trigger').eq(0).hide();
 
       if (this.newDates){// && !this.loaded){
           $('#anim_panel_okLoad').show()
@@ -1705,16 +2100,16 @@ function ANIM(){
         }
 
     }else{
-      $("#anim_panel").children().fadeOut(200);
+      $("#anim_panel").children().fadeOut(10);
       $("#anim_panel").slideUp();
       $('#anim_btn').css({'color':'#9d0202'});
-      $('#date_selectorHide').hide();
+      $('#date_selector #previous i').show()
+      $('#date_selector #next i').show()
+      $('#date_selector .trigger').eq(0).show();
     }
   }
 
   this.choose_dates=function(date0,date1){
-    this.newDates=true
-
     // get number of frames:
     M.times(date0,date1,function(t){
 
@@ -1724,15 +2119,22 @@ function ANIM(){
         self.dates[i]=format_date(new Date(t[i]))[0];
       }
 
-      // show number of frames:
-      $('#anim_panel_info2').html('frames to load: '+t.length);
+      if (t.length<2){
+        $('#anim_panel_info2').html('need more than '+t.length+' frames');
+      }else{
+        // show number of frames:
+        $('#anim_panel_info2').html('frames to load: '+t.length);
 
-      // show load button:
-      $('#anim_panel_okLoad').show();
+        // show load button:
+        $('#anim_panel_okLoad').show();
 
-      // set button task:
-      $('#anim_panel_okLoad').off('click')
-                             .click(function(){self.load();});
+        // set button task:
+        $('#anim_panel_okLoad').off('click')
+                               .click(function(){self.load();});
+
+        self.newDates=true
+
+      }
 
     });
   }
@@ -1748,7 +2150,6 @@ function ANIM(){
        }
     );
 
-
     this.newDates=false
 //    this.loaded=true
 
@@ -1762,6 +2163,47 @@ function ANIM(){
   }
 
 }
+
+
+function PANEL(trigger,id,html,style){
+
+  $('#mapsWrapper0').append('<div '+style+' id="'+id+'">'+html+'</div>');
+
+  var self=this;
+
+
+  $('#'+trigger).click(function(e){
+    self.toggle(e);
+  });
+
+
+  this.show=function(e){
+      e.stopPropagation();
+      $(document).bind( "click",self.hide);
+      show_dialog(id,1);
+      this.visible=true;
+  }
+
+  this.hide=function(e){
+      // check if clicked inside :
+      cond=$(e.target).parents('#'+id).length>0 || e.target.id==id;
+      cond=false; // allow click inside!
+      if (!cond){
+        $(document).unbind( "click",self.hide);
+        show_dialog(id,0);
+        self.visible=false;
+      }
+  }
+
+  this.toggle=function(e){
+    //this.visible=show_dialog('conf_panel')
+    if (this.visible) this.hide(e)
+    else this.show(e)
+  }
+
+}
+
+
 
 function RIVER(){
   this.visible=false;
@@ -1779,35 +2221,38 @@ function RIVER(){
   var labM=['000','025','050','100','200'];
   var strM=['+0y','+&frac14;y','+&frac12;y','+1y','+2y'];
 
-  s='\
+  var s0='\
   <style> \
     #rivDiv { \
       position: absolute; top: 240px; left: 520px; border: 0px solid red; display:none; \
       background-color: white; opacity:0.8;  border-radius: 7px; box-shadow: 0px 0px 7px #888888; \
       z-index:1000 \
     } \
-  </style> \
+  </style>';
+
+  var s1='\
   <div id="rivDiv"> \
    <div style="cursor: pointer; font-size:12px;"> \
      &nbsp; \
      <div style="float:left; padding-left:5px; padding-top:2px;">';
        for (var i = 0; i < labL.length; i++) {
-         s+='       <div id="chriv_l_'+labL[i]+'" onmouseover=this.style.color="blue" \
+         s1+='       <div id="chriv_l_'+labL[i]+'" onmouseover=this.style.color="blue" \
                    onmouseout=this.style.color="black"  style="display:inline" onclick="M.river.choose(\''+labL[i]+'\',null)">'+strL[i]+'</div>';
        }
-      s+='     </div>\
+      s1+='     </div>\
      <div style="float:right; padding-right:5px; padding-top:2px">';
        for (var i = 0; i < labM.length; i++) {
-         s+='       <div id="chriv_m_'+labM[i]+'" onmouseover=this.style.color="blue" \
+         s1+='       <div id="chriv_m_'+labM[i]+'" onmouseover=this.style.color="blue" \
                    onmouseout=this.style.color="black"  style="display:inline" onclick="M.river.choose(null,\''+labM[i]+'\')">'+strM[i]+'</div>';
        }
-  s+='\
+  s1+='\
      </div>\
    </div>\
    <div value="050 050" id="river" style="width:250px"></div>\
   </div>';
 
-  $('#mapsWrapper0').append(s);
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
 
 
   this.show=function(vis){
@@ -1864,4 +2309,56 @@ function RIVER(){
   //M.river.show()
   //this.choose(this.limits.split(' ')[0],this.limits.split(' ')[1])
 
+}
+
+
+function getUrlVar(key){
+  var result = new RegExp(key + "=([^&]*)", "i").exec(window.location.search); 
+  return result && unescape(result[1]) || null; 
+}
+
+function Logos(){
+  this.visible=false;
+
+  var self=this;
+
+  var s0='\
+  <style>\
+    #gloLogo {position:absolute;top:2px;left:90px;\
+              z-index:1000;display:none; height:80px\
+             }\
+    \
+    #gergLogo {position:absolute ; top:5px; left: 180px;height: 70px;\
+               z-index:1000;display:none;\
+              }\
+  </style>\
+  ';
+
+  var s1='\
+  <a href="http://www.glo.texas.gov" target="_blank"><img id="gloLogo" border="0" src="'+tabs_icons_dir+'/gloseal_new.png"/></a>\
+  <a href="http://gerg.tamu.edu" target="_blank"><img id="gergLogo" border="0" src="'+tabs_icons_dir+'/tamu.png"/></a>\
+  ';
+
+  $('head').append(s0);
+  $('#mapsWrapper0').append(s1);
+
+  this.show=function(){
+    $('#gloLogo').show();
+    $('#gergLogo').show();
+    this.visible=true;
+  }
+
+  this.hide=function(){
+    $('#gloLogo').hide();
+    $('#gergLogo').hide();
+    this.visible=false;
+  }
+
+  this.check=function(){
+    //if (getUrlVar('framed')!==null){
+    if (window.location.href.search('/?framed')>-1){
+      this.show()
+    }
+  }
+  this.check();
 }

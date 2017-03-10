@@ -1434,6 +1434,7 @@ var jsc = {
 			var padCursor = 'crosshair';
 
 			// wrap
+			p.wrap.id='pickerBaseDiv';  // added by mma
 			p.wrap.style.clear = 'both';
 			p.wrap.style.width = (dims[0] + 2 * THIS.borderWidth) + 'px';
 			p.wrap.style.height = (dims[1] + 2 * THIS.borderWidth) + 'px';
@@ -1823,7 +1824,8 @@ var jsc = {
 // You can change what class name will be looked for by setting the property jscolor.lookupClass
 // anywhere in your HTML document. To completely disable the automatic lookup, set it to null.
 //
-jsc.jscolor.lookupClass = 'jscolor';
+//jsc.jscolor.lookupClass = 'jscolor';
+jsc.jscolor.lookupClass = null; // added by mma
 
 
 jsc.jscolor.installByClassName = function (className) {
