@@ -657,9 +657,18 @@ function OVERLAY(svg,type,vname){
   this.actualZoom=0;
   this.vname=vname
 
+  // firts hide scale (currently present in type=model only) using opacity instead of .hide().
+  // The reason is that firefox return getBoundingClientRect as zeros if object is hidden with .hide()
+  if (type=='model'){
+    $('[id^='+this.type+'_'+this.vname+'_frame][id$=_scale]',this.svg).css({'opacity':0});
+  }
+
+
   this.hide=function(zoom){
     if (zoom===undefined){
-      $("[id^="+this.type+"_"+this.vname+"_frame]",this.svg).hide();
+      //$("[id^="+this.type+"_"+this.vname+"_frame])",this.svg).hide();
+      // exclude scale:
+      $("[id^="+this.type+"_"+this.vname+"_frame]:not([id$=_scale])",this.svg).hide();
       this.visible=false;
     }else{
       $("#"+this.type+"_"+this.vname+"_frame_"+zoom).hide()
@@ -678,9 +687,6 @@ function OVERLAY(svg,type,vname){
     }else this.hide();
 
     $("#"+this.type+"_"+this.vname+"_frame_"+zoom,this.svg).show()
-
-    // if needed, show scale from svg frame:
-    //$("#"+vname+"_frame_"+zoom+"_scale",svg).show()
 
     this.visible=true;
     this.actualZoom=zoom;
@@ -1261,6 +1267,7 @@ function VFieldScale(vname){
 //    var ob=$('#'+vname+'_frame_'+zoom+'_scale',svg);
     var ob=$('#model_'+vname+'_frame_'+zoom+'_scale',svg);
     var L=ob[0].getBoundingClientRect()['width'];
+    //alert('L = '+'#model_'+vname+'_frame_'+zoom+'_scale'+' = '+L)
     if (vname=='currents')  var p=seta(0,10,L,0);
     else if (vname=='wind') var p=seta2d(0,12,L,0);
     var pts='';
@@ -1268,6 +1275,7 @@ function VFieldScale(vname){
       pts+=p[i][0]+','+p[i][1]+' ';
     }
 
+    //alert('points scale '+vname+' = '+pts);
     $('#'+vname+'Scale').attr('points',pts);
     // center arrow:
     var arrowStart=40-L/2;
@@ -2357,8 +2365,8 @@ function Logos(){
   this.check=function(){
     //if (getUrlVar('framed')!==null){
     if (window.location.href.search('/?framed')>-1){
-      this.show()
-    }
+      this.hide()
+    }else this.show();
   }
   this.check();
 }
