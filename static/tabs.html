@@ -3,71 +3,59 @@
 <head>
     <title>Leaflet and D3 Map</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!--
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet"/>
-    <link href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" rel="stylesheet"/>
--->
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet"/>
 
-<!--    <link href="/static/css/font-awesome.min.css" rel="stylesheet"/>-->
-<!--    <link href="/static/css/leaflet.css" rel="stylesheet"/>-->
-
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet"/>
     <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+    <script src="http://d3js.org/d3.v3.js"></script>
+
+    <?-- datepicker: -->
+    <link rel="stylesheet" type="text/css" href="js/date_picker/mm_redmond.datepick.css"> 
+    <script type="text/javascript" src="js/date_picker/jquery.plugin.js"></script> 
+    <script type="text/javascript" src="js/date_picker/jquery.datepick.js"></script>
+
+    <?-- leaflet: -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+
+    <?-- local: -->
     <script src="js/jscolor/jscolor.js"></script>
     <script src="js/config.js"></script>
     <script src="js/tools.js"></script>
     <script src="js/player.js"></script>
     <script src="js/tabs.js"></script>
 
-   <script src="js/save/html2canvas.js"></script>
-   <script src="js/save/FileSaver.js"></script>
+    <?-- canvg: -->
+    <script type="text/javascript" src="http://canvg.github.io/canvg/rgbcolor.js"></script>
+    <script type="text/javascript" src="http://canvg.github.io/canvg/StackBlur.js"></script>
+    <script type="text/javascript" src="http://canvg.github.io/canvg/canvg.js"></script>
+<!--
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta1/html2canvas.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta1/html2canvas.svg.js"></script>
+-->
+    <script src="js/save/html2canvas.js"></script>
+    <script src="js/save/html2canvas.svg.js"></script>
+
+    <script src="js/save/FileSaver.js"></script>
 
 
-    <link rel="stylesheet" type="text/css" href="js/date_picker/redmond.datepick.css"> 
-    <script type="text/javascript" src="js/date_picker/jquery.plugin.js"></script> 
-    <script type="text/javascript" src="js/date_picker/jquery.datepick.js"></script>
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet"/>
+    <link href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" rel="stylesheet"/>
+-->
 
-    <script src="http://d3js.org/d3.v3.js"></script>
-<!--    <script src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>-->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
-
-
-<style>
-html, body, #mapsWrapper { width:100%; height:800px; margin:0; padding:0; }
-.menu {z-index:1000;font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif; border-radius: 4px; box-shadow: 0px 0px 7px #888888; padding: 4px 5.5px; background-color: white; opacity:0.85;}
-.item_selector {cursor: pointer; display: inline; margin: 0 2px; font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif; border-radius: 4px; padding: 4px 5.5px; background-color: white; opacity:1;}
-.item_selector:active {background-color: #abbcd6;}
-.item_selectori {text-align: center; display: inline; margin: 1px 1px; font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif; padding: 1px 1px; background-color: white; opacity:1;}
-.menu:hover{background-color: #f4f4f4; opacity:1;}
-
-#vars_btn {position:absolute; top: 100px; left: 10px;}
-#vars_panel{position: absolute; padding: 5px; top: 70px; left: 45px; width:130px; background-color: white; display:none;}
+<!--    <link href="/static/css/font-awesome.min.css" rel="stylesheet"/>-->
+<!--    <link href="/static/css/leaflet.css" rel="stylesheet"/>-->
 
 
-#conf_btn {position:absolute; top: 300px; left: 10px;}
-#conf_panel{position: absolute; padding: 5px; top: 300px; left: 45px; width:220px; background-color: white; display:none;}
-
-#webservice_btn {position:absolute; top: 330px; left: 10px;}
-#webservice_panel{position: absolute; padding: 5px; top: 300px; left: 45px; width:180px; background-color: white; display:none;}
-
-#download_btn {position:absolute; top: 360px; left: 10px;}
-#download_panel{position: absolute; padding: 5px; top: 300px; left: 45px; width:180px; background-color: white; display:none;}
-
-#first_menu {position: absolute; top: 80px; left: 10px;}
-#date_selector{position: absolute; top: 10px; left: 500px;}
-#date_selectorHide{position: absolute; top: 10px; left: 500px;}
-
-.wsvar{background-color: #f6f6f6; text-align: center; cursor:pointer}
-.wsvar:hover{background-color: #bfc8d6}
-
-.embed + img { position: relative; left: -24px; top: 0px; }
-</style>
+  <style>
+    html, body, #mapsWrapper { width:100%; height:800px; margin:0; padding:0; }
+    body,input {font-size:12px; font-family: sans-serif}
+    .menu {z-index:1000; border-radius: 4px; box-shadow: 0px 0px 7px #888888; padding: 4px 5.5px;}
+  </style>
 
 </head>
 <body>
-
 <div id="mapsWrapper0" style="height: 480px; width:800px;"> <!--needed for player drag ! otherwise the map also drags-->
   <div id="mapsWrapper" style="height: 480px; width:800px"></div>
 </div>
@@ -81,7 +69,7 @@ fnLoadMaps();
 
 function fnLoadMaps(){
 
-    map = L.map('mapsWrapper', {fullscreenControl: true}).setView([28,-93], 7);
+    map = L.map('mapsWrapper', {fullscreenControl: true}).setView([26.5,-94], 6);
     //L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}', {
     L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
@@ -113,6 +101,9 @@ function fnLoadMaps(){
         d3.select(svg).attr('class','leaflet-zoom-hide'); // to hide during zoom !
         map.on("zoomend", Reset);
         Reset();
+
+        // hide frame border:
+        $('#frame_border','.leaflet-overlay-pane svg').hide()
       });
 
       M=new MASTER();
@@ -149,12 +140,12 @@ function Reset(ob){
 }
 
 
-function webservice(vname){
-  if (vname=='salt'){
-    window.open('/data/thredds/bathy', '_blank');
-//    $("<a href='/data/thredds/bathy' target='_blank'></a>").click();
-  }
-}
+//function webservice(vname){
+//  if (vname=='salt'){
+//    window.open('/data/thredds/bathy', '_blank');
+////    $("<a href='/data/thredds/bathy' target='_blank'></a>").click();
+//  }
+//}
 
 
 $(document).keypress(function(event) {
@@ -164,14 +155,15 @@ $(document).keypress(function(event) {
   M.advance(event,-1);
 });
 
-//$(document).ready(function() {
-
-// vars_panel cant be inside document.ready ! otherwise jscolor wont work. Why!??
+$(document).ready(function() {
+  $( "<style>.menu { background-color:"+config.color_out+"; opacity:"+config.alpha_out+"; }</style>" ).appendTo( "head" )
+  $( "<style>.menu:hover { background-color:"+config.color_over+"; opacity:"+config.alpha_over+"; }</style>" ).appendTo( "head" )
+});
 
 </script>
 
 
-
+<!--
 <div id='webservice_btn' class='menu' onclick="show_dialog('webservice_panel')"><i class="fa fa-rocket fa-lg"></i></div>
 <div id="webservice_panel" class="menu" >
   <div style="margin:5px; float: right; font-weight: bold"> 2016-10-20 03h</div><br>
@@ -204,7 +196,9 @@ $(document).keypress(function(event) {
   <br>
   <button style="margin:5px;" type="button" class="btn" onclick="show_dialog('webservice_panel')">done</button>
 </div>
+-->
 
+<!--
 <div id="download_btn" class="menu" onclick="show_dialog('download_panel')"><i class="fa fa-download fa-lg"></i></div>
 <div id="download_panel" class="menu" >
 
@@ -237,6 +231,103 @@ $(function() {
     });
 });
 </script>
+-->
+<!--
+<div id='mmm'></div>
+<input class='jscolor'>
+
+<div style="float:right">    <input value="D10E00" id="input_currents_color_salt" class="jscolor">    <input value="96FF96" id="input_currents_color_temp" class="jscolor">    <input value="161CC7" id="input_currents_color_speed" class="jscolor">    <input value="000000" id="input_currents_color_none" class="jscolor">    </div>
+-->
+
+<!--
+<div id='Ssave_frame' style='background-color: green; cursor: pointer'>SAVE ME !!!</div>
+<script>
+
+$(function() {
+    $("#Ssave_frame").click(function() {
+        var date=M.dates[M.iactual];
+        if (date) fsave='txla_frame_'+date+'.png';
+        else fsave='txla_current_frame.png';
+
+
+        //var svgElements = $("#mapsWrapper").find('svg[id^="svg"]');
+        var svgElements = $("#mapsWrapper").find('svg');
+
+
+        //replace all svgs with a temp canvas
+        svgElements.each(function() {
+          var canvas, xml;
+
+          // replace viewBox when style exists
+          if($(this)[0].style['left'] || $(this)[0].style['top']) {
+            var top = $(this)[0].style['top'] ? parseInt($(this)[0].style['top']) : 0;
+            var left = $(this)[0].style['left'] ? parseInt($(this)[0].style['left']) : 0;
+            var baseleft = $(this)[0].viewBox.baseVal.x;
+            var basetop = $(this)[0].viewBox.baseVal.y;
+
+            $(this)[0].style['left']=0;
+            $(this)[0].style['top']=0;
+            $(this)[0].viewBox.baseVal.x = baseleft - parseInt(left*($(this)[0].viewBox.baseVal.width/$(this)[0].width.baseVal.value));
+            $(this)[0].viewBox.baseVal.y = basetop - parseInt(top*($(this)[0].viewBox.baseVal.height/$(this)[0].height.baseVal.value));
+
+          }
+
+          $.each($(this).find('[style*=px]'), function(index, el) {
+            //$(this).css('font-size', getStyle(el, 'font-size'));
+          });
+
+
+          // canvg doesn't cope very well with em font sizes so find the calculated size in pixels and replace it in the element.
+          $.each($(this).find('[style*=em]'), function(index, el) {
+            $(this).css('font-size', getStyle(el, 'font-size'));
+          });
+
+
+          canvas = document.createElement("canvas");
+          canvas.className = "screenShotTempCanvas";
+          //convert SVG into a XML string
+          xml = (new XMLSerializer()).serializeToString(this);
+
+          // Removing the name space as IE throws an error
+          xml = xml.replace(/xmlns=\"http:\/\/www\.w3\.org\/2000\/svg\"/, '');
+
+          //draw the SVG onto a canvas
+          canvg(canvas, xml);
+          $(canvas).insertAfter(this);
+
+          //hide the SVG element
+          $(this).attr('class', 'tempHide');
+          $(this).hide();
+        });
+
+        //hide4snapshot();
+        html2canvas($("#mapsWrapper0"), {
+            allowTaint : false,
+            logging : true,
+            taintTest: false,
+            useCORS: true,
+	          letterRendering: true,
+
+            onrendered: function(canvas) {
+          		if (navigator.userAgent.indexOf('MSIE')>0 || navigator.userAgent.match(/Trident.*rv\:11\./)){
+                var blob = canvas.msToBlob();
+                window.navigator.msSaveBlob(blob,fsave);
+              }
+              else{
+                canvas.toBlob(function(blob) {
+                  saveAs(blob,fsave);
+                });
+              }   
+            }
+        });
+        //show4snapshot();
+
+        $("#mapsWrapper").find('.screenShotTempCanvas').remove();
+        $("#mapsWrapper").find('.tempHide').show().removeClass('tempHide');
+    });
+});
+</script>
+-->
 
 
 </body>
