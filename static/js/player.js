@@ -116,7 +116,7 @@ function Play(cid,n,acc){
 
   this.play=function(interval){
     this.status='play';
-    if (interval===undefined) interval=250;
+    if (interval===undefined) interval=100;//250;
 //    var id = setInterval(frame, interval);
     setTimeout(frame, interval);
     var i=play.i;

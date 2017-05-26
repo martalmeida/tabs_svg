@@ -36,9 +36,11 @@ def get_dates(date0,date1,pwd='./'):
 
   #files,times=get_files([date0.year,date1.year])
   files,times=get_files(pwd=pwd)
-  i0=np.where(times>=date0)[0][0]
-  i1=np.where(times<=date1)[0][-1]
-  return times[i0:i1+1]
+  try:
+    i0=np.where(times>=date0)[0][0]
+    i1=np.where(times<=date1)[0][-1]
+    return times[i0:i1+1]
+  except: return np.array(())
 
 def find_nearest(date=None,add=0,pwd='./'):
   if not date:

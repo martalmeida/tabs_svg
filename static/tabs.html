@@ -4,7 +4,12 @@
     <title>TABS, Texas Automated Buoy System</title>
     <meta charset="utf-8">
 
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet"/>
+<!--    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet"/>-->
+
+    <link rel="stylesheet" type="text/css" href="css/font-awesome-4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/font-awesome-animation.min.css">
+
+
     <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
     <script src="http://d3js.org/d3.v3.js"></script>
 
@@ -36,6 +41,17 @@
     <script src="js/save/html2canvas.svg.js"></script>
 
     <script src="js/save/FileSaver.js"></script>
+
+    <!-- client config-->
+    <script>
+      if (typeof(Storage) !== "undefined") {
+        if (localStorage.getItem('tabsConf')){
+//          config=JSON.parse(localStorage.getItem('tabsConf'))
+        }else{
+//          localStorage.setItem('tabsConf',JSON.stringify(config));
+        }
+      }
+    </script>
 
 
 <!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
@@ -69,7 +85,9 @@ fnLoadMaps();
 
 function fnLoadMaps(){
 
-    map = L.map('mapsWrapper', {fullscreenControl: true}).setView([26.5,-94], 6);
+    //map = L.map('mapsWrapper', {fullscreenControl: true}).setView([26.5,-94], 6);
+    map = L.map('mapsWrapper', {fullscreenControl: true}).setView([27.965,-93.274], 7);
+
     //L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}', {
     L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
