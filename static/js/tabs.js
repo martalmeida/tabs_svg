@@ -1,3 +1,15 @@
+function reset_config(){
+  localStorage.removeItem('tabsConf');
+  location.reload();
+}
+
+function update_local_config(){
+    // update client config:
+    if (typeof(Storage) !== "undefined") {
+      localStorage.setItem('tabsConf',JSON.stringify(config));
+    }
+}
+
 function get_zoom(){
   var Zmin=7;
   var Zmax=9;
@@ -18,7 +30,7 @@ function svg_scale(){
   return r=(h/H+w/W)/2;
 }
 
-function show_dialog(name,forceValue){
+function show_dialog(name,forceValue,funcComplete){
   var ob=$('#'+name);
 
   if (forceValue===undefined)
@@ -27,9 +39,9 @@ function show_dialog(name,forceValue){
 
 
   if (disp=='none'){
-    ob.slideDown();
+    ob.slideDown(complete=funcComplete);
   }else{
-    ob.slideUp();
+    ob.slideUp(complete=funcComplete);
   }
   return (disp!='block')
 }
@@ -39,6 +51,7 @@ function MASTER(){
   this.frames=[];
   this.dates=[];
   this.iactual=null;
+
 
   this.currents_scale=new VFieldScale('currents');
   this.wind_scale=new VFieldScale('wind');
@@ -56,16 +69,28 @@ function MASTER(){
 
   this.logos=new Logos();
 
+/*
+  // store panels to hide when clicking on the page!
+  this.panelsHideOnClick=[]
+  this.panelsHideOnClick.push(this.vars_panel.help)
+  $(document).bind( "click",function(e){
+    for (var i=0; i<self.panelsHideOnClick.length; i++){
+      alert('hiding from master!'+self.panelsHideOnClick[i].visible);
+      self.panelsHideOnClick[i].hide(e);
+    }
+  });
+*/
+
   var self=this;
 
-  this.times=function(date0,date1,func){
-    $.get(tabs_dir+'/data/svg/datetimes/'+date0+'/'+date1,function(data){
+  this.times=function(date0,date1,dt,func){
+    $.get(tabs_dir+'/data/svg/datetimes/'+date0+'/'+date1+'/'+dt,function(data){
       if (func) func(data)
     })
   }
 
   // load all times (as yyyymmddhh string):
-  this.times(0,0,function(t){
+  this.times(0,0,0,function(t){
     self.allTimes=new Array(t.length);
     for (var i=0;i<t.length;i++){
       self.allTimes[i]=format_date(new Date(t[i]))[0];
@@ -156,6 +181,24 @@ function MASTER(){
     if (i<0){
       if (date<this.all_times[0]) i=0
       else if (date>this.all_times.slice(-1)[0]) i=this.all_times.length-1
+      else{ // nearest
+        var d1=this.all_times.find(function(e){return e>=date})
+        var d0=this.all_times.find(function(e){return e<=date})
+
+        // which is nearest, d0 or d1?
+        var d0_str=d0.slice(0,4)+'-'+d0.slice(4,6)+'-'+d0.slice(6,8)+' '+d0.slice(8,d0.length)+':00';
+        var d1_str=d1.slice(0,4)+'-'+d1.slice(4,6)+'-'+d1.slice(6,8)+' '+d1.slice(8,d1.length)+':00';
+        var d__str=date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+' '+date.slice(8,date.length)+':00';
+        var t0=new Date(d0_str).getTime()
+        var t1=new Date(d1_str).getTime()
+        var t =new Date(d__str).getTime()
+
+        if ((t1-t)>(t-t0))
+        var T=d0;
+        else
+        var T=d1;
+        return T
+      }
     }
 
 //    else
@@ -304,7 +347,6 @@ function MASTER(){
     //M.vars_panel.enable(1); // this is currently never being disabled. So, no need to enable here!
     this.show_time(this.dates[this.iactual]);
     this.advance('evt',0); // set click events for time selector arrows
-
   }
 
 
@@ -336,10 +378,23 @@ function MASTER(){
     $('#radio_'+vname+'_model').prop('checked',1); // must be always model!
 
     // also check buoys field checkbox here:
-    if (frame.field_buoys.actual=='none')
-      $('#checkbox_fields_buoys').prop('checked',0);
-    else $('#checkbox_fields_buoys').prop('checked',1);
+    //
+    //if (frame.field_buoys.actual=='none')
+    //  $('#checkbox_field_buoys').prop('checked',0);
+    //else $('#checkbox_field_buoys').prop('checked',1);
+    //
+    // the above condition cannot be used because field_buoys.actual becomes none of no field data is available
+    // for current date (see FIELD.n_layers). Thus use the config instead:
+    if (config.show_field_buoys){
+      if (vname=='none') var v=0;
+      else var v=1;
+    }else{
+      var v=0;
+    }
+    $('#checkbox_field_buoys').prop('checked',v);
+
   }
+
 
   this.on_show_overlay=function(type,vname){
     if (!this.frames[this.iactual]) return
@@ -405,7 +460,7 @@ function MASTER(){
         vis=$(ob).prop('checked');
 
     // radio buttons:
-    if (['temp','salt','speed','none'].indexOf(vname)>-1){
+    if (['temp','salt','speed','oxy','none'].indexOf(vname)>-1){
       frame.show_field(vname)
       this.on_show_field()
 
@@ -420,7 +475,7 @@ function MASTER(){
         // alone, without model fields. Not the case!
         // note that usually config is only set inside FRAME class. This is an exception cos both model and buoys are
         // shown in FRAME.show_field (and thus both configs are set there too). There are both done is the same methos cos
-        // in no case buoys fields are shown without model fields (only moedl fields can be selected!).
+        // in no case buoys fields are shown without model fields (only model fields can be selected!).
         if (vis){
           frame.field_buoys.show(frame.field_model.actual,frame.field_model.layer[frame.field_model.actual]);
           config['show_field_buoys']=true;
@@ -432,6 +487,9 @@ function MASTER(){
       }
     }
 
+    // update client config
+    update_local_config()
+
   }
 
   this.change_color=function(what,field,color){
@@ -439,6 +497,7 @@ function MASTER(){
     if (!this.frames[this.iactual]) return
     var frame=this.frames[this.iactual]
     config[what+'_color'][field]=color;
+
 
     // update new color now:
     //if (frame.field_model.actual==field){
@@ -450,6 +509,9 @@ function MASTER(){
     // better redraw the whole frame, cos for instance, scale color changes if there
     // are model currents displayed, etc. So, it is easier to draw everything
     this.show_frame(this.iactual);
+
+    // update client config
+    update_local_config()
   }
 
 }
@@ -607,7 +669,7 @@ function FIELD(svg,type){
   this.type=type; // model or buoys
   this.actual='unk';
   this.layer={};
-  this.names=['temp','salt','speed'];
+  this.names=['temp','salt','speed','oxy'];
 
   this.n_layers=function(what){
     var ob=$('[id^='+this.type+'_'+what+'_frame_0\\:]',this.svg);
@@ -706,6 +768,13 @@ function OVERLAY(svg,type,vname){
   this.set_color=function(color){
     if (!color.startsWith('rgb') && color[0]!='#') color='#'+color;
     $("[id^="+this.type+'_'+this.vname+"_frame]",this.svg).children().css({'stroke':color});
+
+    // fill wind arrows with stroke color and transparency?
+    if (vname=='wind'){
+      $("[id^="+this.type+'_'+this.vname+"_frame]",this.svg).children()
+         .css({'fill':color,'fill-opacity':0.2});
+
+    }
   }
 
 }
@@ -1307,6 +1376,12 @@ function VFieldScale(vname){
   this.set_color=function(color){
     if (!color.startsWith('rgb') && color[0]!='#') color='#'+color;
     $('#'+vname+'Scale').css({'stroke':color});
+
+    // fill wind arrows with stroke color and transparency?
+    if (vname=='wind'){
+      $('#'+vname+'Scale').css({'fill':color,'fill-opacity':0.2});
+    }
+
   }
 
 }
@@ -1369,12 +1444,18 @@ function COLORBAR(){
     self.change_layer(1);
     //M.frames[M.iactual].field.show(self.field,self.layer);
     M.frames[M.iactual].show_field(self.field,self.layer);
+
+    // update client config
+    update_local_config()
   })
 
   $('#fieldLayer_down').click(function(){
     self.change_layer(-1);
     //M.frames[M.iactual].field.show(self.field,self.layer); // use next line just to
-    M.frames[M.iactual].show_field(self.field,self.layer);   // store vname and layerin config
+    M.frames[M.iactual].show_field(self.field,self.layer);   // store vname and layer in config
+
+    // update client config
+    update_local_config()
   })
 
   this.load=function(date){
@@ -1465,13 +1546,13 @@ function CONF_PANEL(){
 
   var vars=['Currents','Wind','Radar','Buoys', 'Isobaths'];
   var vars2=['Model currents','Model wind','Radar currents','Buoys currents/wind','Isobaths'];
-  var vars_field=['salt','temp','speed','none'];
-  var vars_field2=['Salinity','Temp.','Speed','none'];
+  var vars_field=['salt','temp','speed','oxy','none'];
+  var vars_field2=['Salinity','Temp.','Speed','Oxygen','none'];
 
   s0='\
   <style> \
-    #conf_btn {position:absolute; top: 150px; left: 10px;cursor:pointer}\
-    #conf_panel{position: absolute; padding: 5px; top: 150px; left: 45px; width:260px; display:none;}\
+    #conf_btn {position:absolute; top: 120px; left: 10px;cursor:pointer}\
+    #conf_panel{position: absolute; padding: 5px; top: 120px; left: 45px; width:300px; display:none;}\
     #conf_panel input { \
       border-radius: 2px; width:33px;font-size:8px; margin: 1px; border:1px solid black;display:inline; font-family: monospace; \
     } \
@@ -1480,7 +1561,7 @@ function CONF_PANEL(){
   var s1='\
   <div id="conf_btn" class="menu"><i class="fa fa-cog fa-lg"></i></div> \
   <div id="conf_panel" class="menu"> \
-    Colors for:\
+    &#8227; Colors for:\
     \
     <div style="width: 100%; display: table; font-size: 10px"> \
       <div style="display: table-row;">\
@@ -1512,7 +1593,10 @@ function CONF_PANEL(){
 //    <button style="margin:5px;" type="button" class="btn">done</button> \
 //  </div>\
 //  ';
-  s1+='<br></div>';
+  s1+='<br>\
+   &#8227; <div onclick="reset_config()" style="display: inline; color:#0a46a2; cursor:pointer">Reset default settings</div> \
+   <div style="padding-left:10px">(colors, layers, ...)</div>\
+  </div>';
 
 
   $('head').append(s0);
@@ -1532,6 +1616,34 @@ function CONF_PANEL(){
   });
 
 
+  this.show=function(e){
+     show_dialog('conf_panel',1,function(){$(document).bind( "click",self.hide)});
+     self.visible=true;
+  }
+
+  this.hide=function(e){
+      // check if clicked inside :
+      //cond=$(e.target).parents('#'+id).length>0 || e.target.id==id;
+      //or simply:
+      //cond=$(e.target).closest('#conf_panel').length;
+      // also allow click on the picker !
+      cond=$(e.target).parents('#conf_panel').length>0 || e.target.id=='conf_panel' || $(e.target).parents('#pickerBaseDiv').length>0;
+      if (self.closeOnClick){
+        cond=false; // will close even if clicked inside
+      }
+      if (!cond){
+        show_dialog('conf_panel',0,function(){$(document).unbind( "click",self.hide)});
+        self.visible=false;
+      }
+  }
+
+  this.toggle=function(e){
+    if (this.visible) this.hide(e)
+    else this.show(e)
+  }
+
+
+/*
 //  $('#conf_panel button').click(function(e){
 //    self.toggle(e);
 //  });
@@ -1558,14 +1670,38 @@ function CONF_PANEL(){
     if (this.visible) this.hide(e)
     else this.show(e)
   }
+*/
 
 }
 
 function DOWNLOAD_PANEL(){
+
+/*
+  //-----------------------------------
+  // Buoy Markers help:
+  var style='style="font-size: 12px;display: none; position: absolute; top:200px;left:195px;width:200px" class="menu"';
+  var html='<p>Buoy\'s Markers Help</p>\
+            There are two types of buoys:\
+            <div>TABS <img src="'+tabs_icons_dir+'/buoy.png" width=16.5 height=26.25> and \
+            NDBC <img src="'+tabs_icons_dir+'/buoy2.png" width=26.25 height=23.25> \
+            </div>\
+            The color indicates the buoy/data status at selected date:\
+            <ul>\
+              <li>pink - buoy is discontinued and has no data</li>\
+              <li>white - buoy has no data</li>\
+              <li>blue - buoy has data</li>\
+            </ul>\
+            <div>By clicking in the markers you will be redirected to the buoys data query site</div>\
+            <br>';
+  this.help=new PANEL('buoy_markers_panel_help_btn','buoy_markers_help',html,style,true);
+  $('#buoy_markers_panel_help_btn').css({'color':'#98bccf','cursor':'pointer'});
+  //-----------------------------------
+*/
+
   s0='\
   <style> \
-    #download_btn {position:absolute; top: 180px; left: 10px; cursor:pointer} \
-    #download_panel{position: absolute; padding: 5px; top: 180px; left: 45px; width:180px; \
+    #download_btn {position:absolute; top: 150px; left: 10px; cursor:pointer} \
+    #download_panel{position: absolute; padding: 5px; top: 150px; left: 45px; width:180px; \
       z-index: 1000; display: none;}\
     #download_frame {cursor:pointer; display:table}\
     #download_anim {cursor:pointer; display:table}\
@@ -1590,6 +1726,7 @@ function DOWNLOAD_PANEL(){
   $('head').append(s0);
   $('#mapsWrapper0').append(s1);
 
+  this.closeOnClick=false;
   var self=this;
 
   $('#download_btn').click(function(e){
@@ -1607,17 +1744,49 @@ function DOWNLOAD_PANEL(){
 
 
   this.show=function(e){
-      e.stopPropagation();
-      $(document).bind( "click",self.hide);
-      show_dialog('download_panel',1);
-      this.visible=true;
+     show_dialog('download_panel',1,function(){$(document).bind( "click",self.hide)});
+     self.visible=true;
   }
 
   this.hide=function(e){
+      // check if clicked inside :
+      //cond=$(e.target).parents('#'+id).length>0 || e.target.id==id;
+      //or simply:
+      cond=$(e.target).closest('#download_panel').length;
+      if (self.closeOnClick){
+        cond=false; // will close even if clicked inside
+      }
+      if (!cond){
+        show_dialog('download_panel',0,function(){$(document).unbind( "click",self.hide)});
+        self.visible=false;
+      }
+  }
+
+  this.toggle=function(e){
+    if (this.visible) this.hide(e)
+    else this.show(e)
+  }
+
+
+/*
+  this.show=function(e){
+//      e.stopPropagation();
+      e.stopImmediatePropagation()
+//      $(document).bind( "click",self.hide);
+      show_dialog('download_panel',1);
+      this.visible=true;
+
+      $(document).bind( "click",self.hide);
+  }
+
+  this.hide=function(e){
+    alert('will hide !')
     // check if clicked inside download_panel:
-    cond=$(e.target).parents('#download_panel').length>0 || e.target.id=='download_panel';
+    //cond=$(e.target).parents('#download_panel').length>0 || e.target.id=='download_panel';
+    //or simply:
+    cond=$(e.target).closest('#download_panel').length;
     if (!cond){
-      $(document).unbind( "click",self.hide);
+        $(document).unbind( "click",self.hide);
         show_dialog('download_panel',0);
         self.visible=false;
       }
@@ -1627,6 +1796,7 @@ function DOWNLOAD_PANEL(){
     if (this.visible) this.hide(e)
     else this.show(e)
   }
+*/
 
   function hide4snapshot(){
     $(".leaflet-control-zoom.leaflet-bar.leaflet-control").hide();
@@ -1764,13 +1934,23 @@ function VARS_PANEL(){
   this.enabled=true;
   this.visible=false;
 
-  var vars_field=['salt','temp','speed','none'];
-  var vars_field_names=['Salinity','Temperature','Speed','none'];
+  var vars_field=['salt','temp','speed','oxy','none'];
+  var vars_field_names=['Salinity','Temperature','Speed','Oxygen','none'];
 
+  // panel at left:
+  /*
   var s0='\
   <style> \
     #vars_btn {position:absolute; top: 100px; left: 10px; cursor:pointer}\
     #vars_panel{position: absolute; padding: 5px; top: 90px; left: 45px; width:130px; display:none;}\
+  </style>';
+  */
+
+  // panel at right:
+  var s0='\
+  <style> \
+    #vars_btn {position:absolute; top: 10px; left: 760px; cursor:pointer}\
+    #vars_panel{position: absolute; padding: 5px; top: 40px; left: 648px; width:130px; display:none;}\
   </style>';
 
   var s1='\
@@ -1797,7 +1977,7 @@ function VARS_PANEL(){
     <div style="width: 100%"> \
       <div style="width: 40px; float: left;">Buoys</div> \
       <div style="margin-left: 42px;"> \
-         <input id="checkbox_fields_buoys"   type="checkbox" value="fields:buoys"   style="cursor: pointer" onclick="M.choose(this)">fields <br>\
+         <input id="checkbox_field_buoys"   type="checkbox" value="fields:buoys"   style="cursor: pointer" onclick="M.choose(this)">fields <br>\
          <input id="checkbox_currents_buoys" type="checkbox" value="currents:buoys" style="cursor: pointer" onclick="M.choose(this)">currents <br>\
          <input id="checkbox_wind_buoys"     type="checkbox" value="wind:buoys"     style="cursor: pointer" onclick="M.choose(this)">wind <br>\
          <input id="checkbox_markers_buoys"  type="checkbox" value="markers:buoys"   style="cursor: pointer" onclick="M.choose(this)">markers \
@@ -1820,7 +2000,9 @@ function VARS_PANEL(){
 
   //-----------------------------------
   // Buoy Markers help:
-  var style='style="font-size: 12px;display: none; position: absolute; top:200px;left:195px;width:200px" class="menu"';
+  //var style='style="font-size: 12px;display: none; position: absolute; top:200px;left:195px;width:200px" class="menu"';
+  // panel at right:
+  var style='style="font-size: 12px;display: none; position: absolute; top:135px;left:430px;width:200px" class="menu"';
   var html='<p>Buoy\'s Markers Help</p>\
             There are two types of buoys:\
             <div>TABS <img src="'+tabs_icons_dir+'/buoy.png" width=16.5 height=26.25> and \
@@ -1834,7 +2016,7 @@ function VARS_PANEL(){
             </ul>\
             <div>By clicking in the markers you will be redirected to the buoys data query site</div>\
             <br>';
-  this.help=new PANEL('buoy_markers_panel_help_btn','buoy_markers_help',html,style);
+  this.help=new PANEL('buoy_markers_panel_help_btn','buoy_markers_help',html,style,true);
   $('#buoy_markers_panel_help_btn').css({'color':'#98bccf','cursor':'pointer'});
   //-----------------------------------
 
@@ -1874,39 +2056,57 @@ function DATE_SELECT(){
   var s0=' \
   <style> \
     #date_selector { \
-      width: 230px; text-align:center; \
-      position: absolute; top: 10px; left: 500px;\
+      width:180px; wwidth: 230px; text-align:center; \
+      position: absolute; top: 10px; left: 350px;\
     } \
     #current_date { \
       width: 100px; text-align:center; border: 1px solid #cccccc; Bborder-right:0px; \
+      cursor: pointer;\
     } \
 /*    #current_hour { \
       width: 24px; text-align:center; border: 1px solid #cccccc; Bborder-left:0px; \
       position: relative; left: 80px; \
     }*/ \
     #anim_btn { \
-      color:#9d0202; margin-right:10px\
+      Ccolor:#9d0202; Mmargin-right:10px;\
+      color: #396fc2;\
     } \
+    .mmm{margin-top:10px;} \
+\
+    .selH{margin:1px; display:inline-block; width:17px; border:1px solid transparent} \
+\
+    .selH.enabled{text-decoration: none; cursor:pointer; background-color:#abbcd6; color:#010188} \
+\
+    .selH.disabled{text-decoration:line-through; cursor:default; background-color:#f2f2f2; color:#6d6d88} \
+\
+    .selH.enabled.current{border: 1px solid #9d0202 !important} \
   </style>';
 
   var s1='\
   <div id="date_selector" class="menu"> \
 \
-      <div>\
+      <div style="height:20px;">\
         <div style="float: left;">\
           <div style="display: table-cell; width: 20px" id="previous"><i class="fa fa-step-backward fa-lg"></i></div> \
+\
+          <div style="display: table-cell; width: 0px"> \
+            <input style="border:1px; width:0px" id="current_date_pick"  readonly> \
+          </div> \
+\
           <div style="display: table-cell">\
             <input id="current_date" style="background-color: transparent;border: 1px solid #cccccc; border-radius: 3px" readonly> \
           </div>\
           <div style="display: table-cell; width: 20px" id="next"><i class="fa fa-step-forward fa-lg"></i></div> \
         </div>\
 \
-        <div style="float: left; width: 40px"> \
+<!--        <div style="float: left; width: 40px"> \
           <input style="border:0px; width:0px" id="current_date_pick"  readonly> \
-        </div> \
+        </div>--> \
 \
-        <div style="float:right" id="anim_btn"><i style="cursor:pointer;position" class="fa fa-play-circle-o fa-lg" onclick="M.anim.show_dialog()"></i></div> \
-        &nbsp;\
+        <div style="float:right;margin-top:3px;" id="anim_btn">\
+          <i style="cursor:pointer;position" class="fa fa-plus-square-o fa-lg" onclick="M.anim.show_dialog()"></i>\
+<!--          <i style="cursor:pointer;position" class="fa fa-play-circle-o fa-lg" onclick="M.anim.show_dialog()"></i>-->\
+        </div>&nbsp;\
       </div>\
 \
       <div style="display: none"> \
@@ -1919,6 +2119,98 @@ function DATE_SELECT(){
 
   $('head').append(s0);
   $('#mapsWrapper0').append(s1);
+
+  // select hour:
+  var style='style="text-align: center;font-size: 12px;display: none; position: absolute; top:40px;left:400px;width:130px" class="menu"';
+  var html='Select hour<p>';
+  for (var i=0; i<24;i++){
+    if (i<10) i='0'+i;
+    html+='<div class="selH enabled" id="sel_hour_'+i+'">'+i+'</div>';
+  }
+  this.hourSelect=new PANEL(null,'select_hour',html,style,true);
+
+  for (var i=0; i<24;i++){
+    if (i<10) i='0'+i;
+    $('#sel_hour_'+i).click(function(){
+        if ($(this).prop('enabled')){
+          var hh=$(this).text();
+          var date=$('#current_date').val().slice(0,10).replace(/-/g,'');
+          M.load_date(date+hh,true);
+        }else
+        console.log('doing nothing!');
+      })
+      .mouseover(function(){
+        if ($(this).prop('enabled') & !$(this).prop('isCurrent'))
+        $(this).css({border:'1px solid #010188'})
+       })
+      .mouseout(function(){
+        if ($(this).prop('enabled') & !$(this).prop('isCurrent'))
+        $(this).css({border:'1px solid transparent'})
+       })
+  }
+
+  var self=this;
+
+  $('#current_date').click(function(e){
+    if (this.selectionStart>=10){
+      // show hour selector!
+      // 1st check if hours are available; anso highlight current hour!
+      var date=$('#current_date').val().slice(0,10).replace(/-/g,'');
+      var hhCurrent=$('#current_date').val().slice(11,13);
+      for (var i=0; i<24;i++){
+        if (i<10) i='0'+i;
+        var ob=$('#sel_hour_'+i)
+        var hh=ob.text();
+//        console.log(date+hh+' HHH='+hhCurrent);
+
+        if (hhCurrent==hh){
+          ob.addClass('current');
+          ob.prop('isCurrent',true);
+        }else{
+          ob.removeClass('current');
+          ob.prop('isCurrent',false);
+        }
+
+
+        if (M.all_times.indexOf(date+hh)===-1){
+          //ob.css({'text-decoration':'line-through',cursor:'default','background-color':'#f2f2f2',color:'#6d6d88'})
+          ob.removeClass('enabled');
+          ob.addClass('disabled');
+          ob.prop('enabled',false);
+        }else{
+          ob.removeClass('disabled');
+          ob.addClass('enabled');
+          //ob.css({'text-decoration':'',cursor:'pointer','background-color':'#abbcd6',color:'#010188'})
+          ob.prop('enabled',true);
+        }
+      }
+
+      self.hourSelect.show();
+//      $(this).css({'cursor':'pointer'});
+    }else{
+      // show date selector!
+      $('#current_date_pick').datepick('show');
+    }
+  });
+
+  /* set whole input as pointer instead !
+  $('#current_date').mousemove(function(e){
+    var x = e.pageX - $(this).offset().left;
+    var y = e.pageY - $(this).offset().top;
+    x=x/$(this).width();
+    if (x>0.7)
+    $(this).css({'cursor':'pointer'});
+    else
+    $(this).css({'cursor':''});
+
+//    console.log(this.width+' '+x+' '+y);//this.selectionStart);
+//    if (this.selectionStart>=10){
+//      // show hour selector!
+//      self.hourSelect.show();
+//      $(this).css({'cursor':'pointer'});
+//    }
+  });
+*/
 
 /*
   $('#date_selector')
@@ -1935,8 +2227,8 @@ function DATE_SELECT(){
   var maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 7);
   var maxDateStr =format_date(maxDate)[1].split(' ')[0];
-  $('#current_date_pick').datepick({showOnFocus: false, showTrigger: '#calImg',
-  minDate: config.date_min, maxDate: maxDateStr,
+  $('#current_date_pick').datepick({showOnFocus: false,//, showTrigger: '#calImg',
+  minDate: config.date_min, maxDate: maxDateStr,pickerClass:'mmm',
   dateFormat: 'yyyy-mm-dd',
     onSelect: function(date) {
 
@@ -1947,7 +2239,7 @@ function DATE_SELECT(){
 
        date=format_date(new Date(date))[0].slice(0,8)+hour;//+$('#current_hour').val().slice(0,2);
 ///       $('#current_date').val(date);
-///       alert(date);
+//       alert(date);
        M.load_date(date,true);
       }
   });
@@ -1967,7 +2259,7 @@ function ANIM(){
   var s0=' \
   <style> \
     #anim_panel { \
-      padding-top:10px; padding-bottom:3px; height:60px; \
+      padding-top:5px; padding-bottom:3px; height:45px; \
       display: none;\
     } \
     #anim_panel_info0 { \
@@ -1984,9 +2276,10 @@ function ANIM(){
     } \
     #anim_panel_info2 { \
       width: 77%; float:left;\
+      padding-top:2px;\
     } \
     #anim_panel_dates_input { \
-      width:0px; border:0px; \
+      Wwidth:0px; Bborder:0px; \
     } \
     #anim_panel_okLoadi { \
       background-color: #bfc8d6; margin-top: 2px;padding: 2px 3px 0px 3px; border: 1px solid #a3acb8; border-radius: 3px; \
@@ -1996,14 +2289,29 @@ function ANIM(){
 
   var s1='\
   <div id="anim_panel"> \
-    <div id="anim_panel_info0"><i id="anim_panel_help_btn" class="fa fa-question-circle fa"></i><div id="anim_panel_info1"></div></div> \
-    <div>\
+\
+<!--\
+    <div id="anim_panel_info0">\
+      <i id="anim_panel_help_btn" class="fa fa-question-circle fa"></i>\
+      <div id="anim_panel_info1"> <div id="anim_opts_btn">\
+      <i style="cursor:pointer;" class="fa fa-calendar-check-o fa-lg faa-shake animated" onclick="M.anim.show_dialog()"></i>\
+     </div></div>\
+    </div> \
+-->\
+\
+    <div style="height:25px">\
       <div id="playCont"></div> \
-      <div><input id="anim_panel_dates_input"></div>\
+      <div  style="float:right">\
+<!--        <input id="anim_panel_dates_input">-->\
+        <i id="anim_opts_btn" style="cursor:pointer;" class="fa fa-calendar-check-o fa-lg faa-shake animated"></i>\
+      </div>\
     </div>\
+\
     <div id="anim_panel_info2">&nbsp;</div> \
+\
     <div id="anim_panel_okLoad"><i id="anim_panel_okLoadi" class="fa fa-download fa-1"> load</i></div> \
   </div> \
+\
   <div style="display:none"> \
     <img style="cursor:pointer;position;position: relative; top: 2px;" id="calImg2" src="js/date_picker/calendar-blue.gif" class="trigger"> \
   </div> \
@@ -2012,6 +2320,111 @@ function ANIM(){
   $('head').append(s0);
   $('#date_selector_anim').append(s1);
 
+  // anim opts panel:
+  var style='style="font-size: 12px;display: none; position: absolute; top:95px;left:350px;width:230px" class="menu"';
+  var html='<p>Animation Options</p>\
+            <ul style="padding-left:15px">\
+              <li style="margin-top:10px">interval between frames</li>\
+\
+            <div style="padding-left:0px">\
+              <input type="radio" name="dt" id="dt_1"  value="1"><label for="dt_1">1h</label>\
+              <input type="radio" name="dt" id="dt_3"  value="3"><label for="dt_3">3h</label>\
+              <input type="radio" name="dt" id="dt_6"  value="6" checked><label for="dt_6">6h</label>\
+              <input type="radio" name="dt" id="dt_12" value="12"><label for="dt_12">12h</label>\
+              <input type="radio" name="dt" id="dt_24" value="24"><label for="dt_24">1 day</label>\
+            </div>\
+\
+              <li  style="margin-top:5px">Period</li>\
+              <ul style="padding-left:15px">\
+                <li id="anim_prev_wk">animate previous week</li>\
+                <li id="anim_next_wk">animate next week (forecast)</li>\
+                <li id="anim_sel_rng">select range</li>\
+                  <input style="border: 1px solid rgb(204, 204, 204); border-radius: 3px; width:150px;height:12px;font-size:12px" id="anim_panel_dates_input">\
+                  <input readonly style="text-align:center; border: 1px solid #a3acb8;  background-color: #bfc8d6;  border-radius: 3px; width:30px;height:12px;font-size:12px" id="anim_panel_dates_input_sub" value="go">\
+              </ul>\
+            </ul>\
+            <div>\
+            Usage: after selecting the interval and period, press the load button (if present)\
+            </div>\
+            ';
+  this.opts=new PANEL('anim_opts_btn','anim_opts',html,style,false,'datepick');
+
+  $('#anim_opts input,label').css({'cursor':'pointer'});//,color:'#0a46a2'})
+  $('#anim_opts li[id^=anim]').css({cursor:'pointer','margin-top':'3px'})
+  $('#anim_opts li[id*=_wk]').css({color:'#0a46a2'})
+
+  // remove animation of button opts after 1st click
+  $('#anim_opts_btn').one('click',function(){$(this).removeClass('animated')});
+
+  this.submit=function(type){
+    if (type==='prev_wk' || type=='next_wk'){
+      var date0 = new Date();
+      var date1 = new Date();
+
+      date0.setDate(31);
+      date0.setMonth(12);
+      date0.setYear(2016);
+
+      if (type==='prev_wk'){
+        date0.setDate(date0.getDate()-7);
+        date0 =format_date(date0)[0];
+        date1 =format_date(date1)[0];
+      }else{
+        date1.setDate(date1.getDate()+7);
+        date1 =format_date(date1)[0];
+        date0 =format_date(date0)[0];
+      }
+    }else if (type=='range'){
+      var dates=$('#anim_panel_dates_input').val().split(' - ');
+      var date0=new Date(dates[0]);
+      var date1=new Date(dates[1]);
+
+      // add one day to final date
+      date1.setDate(date1.getDate() + 1);
+
+      date0 =format_date(date0)[0];
+      date1 =format_date(date1)[0];
+    }
+
+    console.log('HELLO '+date0+' '+date1);
+    var dt=parseInt($('input[name=dt]:checked').val());
+
+    self.choose_dates(date0,date1,dt)
+    play.update_n(0);
+    self.opts.hide(0); // close panel !
+  }
+
+  $('#anim_prev_wk').click(function(){
+    self.submit('prev_wk');
+  });
+  $('#anim_next_wk').click(function(){
+    self.submit('next_wk');
+  });
+  $('#anim_panel_dates_input_sub').click(function(){
+    self.submit('range');
+  });
+/*
+    var date0 = new Date();
+    var date1 = new Date();
+
+    date0.setDate(31);
+    date0.setMonth(12);
+    date0.setYear(2016);
+
+    date0.setDate(date0.getDate()-7);
+    date0 =format_date(date0)[0];
+    date1 =format_date(date1)[0];
+//    alert(date0+' to '+date1);
+
+    var dt=parseInt($('input[name=dt]:checked').val());
+
+    self.choose_dates(date0,date1,dt)
+    play.update_n(0);
+    self.opts.hide(0); // close panel !
+  });
+*/
+
+  /*
   // anim help panel:
   var style='style="font-size: 12px;display: none; position: absolute; top:50px;left:280px;width:200px" class="menu"';
   var html='<p>Animations Help</p>\
@@ -2020,8 +2433,8 @@ function ANIM(){
             3. play<br> \
             <img align="right" src="'+tabs_images_dir+'/ahelp.png"><br>\
             <!--(use <i class="fa fa-play-circle-o fa-lg"></i> to show/hide the animation options)-->';
-  this.help=new PANEL('anim_panel_help_btn','anim_help',html,style);
-
+  this.help=new PANEL('anim_panel_help_btn','anim_help',html,style,true);
+  */
 
   /*
   $('#anim_panel_help_btn').click(function(){
@@ -2053,10 +2466,10 @@ function ANIM(){
   maxDate.setDate(maxDate.getDate() + 7);
   var maxDateStr =format_date(maxDate)[1].split(' ')[0];
 
-  $('#anim_panel_dates_input').datepick({showOnFocus: false, showTrigger: '#calImg2',
+  $('#anim_panel_dates_input').datepick({showOnFocus: true, //false,showTrigger: '#calImg2',
   minDate: '2010-01-01', maxDate: maxDateStr,
   dateFormat: 'yyyy-mm-dd',
-  rangeSelect: true,
+  rangeSelect: true});/*,
   onClose: function(dates) {
     if (dates!=''){
       if (dates[1].getTime()==dates[0].getTime()){
@@ -2067,9 +2480,12 @@ function ANIM(){
           date1.setDate(date1.getDate() + 1);
           var date1 =format_date(date1)[0].slice(0,8);
 
-          self.choose_dates(date0,date1)
+          // submit:
+          //var dt=parseInt($('input[name=dt]:checked').val());
+          //self.choose_dates(date0,date1,dt)
       }
-      play.update_n(0);
+//      play.update_n(0);
+      //self.opts.hide(0); // close panel !
     }
   },
   onSelect: function(dates) {
@@ -2083,20 +2499,36 @@ function ANIM(){
         date1.setDate(date1.getDate() + 1);
         var date1 =format_date(date1)[0].slice(0,8);
 
-        self.choose_dates(date0,date1)
+        // submit:
+        //var dt=parseInt($('input[name=dt]:checked').val());
+        //self.choose_dates(date0,date1,dt)
       }else{
         $('#anim_info').html('please select 2 different dates');
         $('#anim_ok_load').hide;
       }
     }
   });
+*/
 
   this.show_dialog=function(){
     var ob=$('#anim_panel');
-    if (ob.css('display')=='none'){
+    if (ob.css('display')=='none'){  // ----> show
+      $('#date_selector').css({'width':230});
+      $('#current_date').prop('disabled',true).css({'cursor':'default'});
+
       $('#anim_panel').fadeIn(250);;
       $("#anim_panel").children().fadeIn(500);
-      $('#anim_btn').css({'color':'#396fc2'});
+
+      // hide again info 2 (the "ready to play message" , etc)
+      if (!self.newDates){
+        $('#anim_panel_info2').fadeOut(3000);
+      }
+
+      //$('#anim_btn').css({'color':'#396fc2'});
+
+      $('#anim_btn i').removeClass('fa-plus-square-o');
+      $('#anim_btn i').addClass('fa-minus-square-o');
+
       $('#date_selector #previous i').hide()
       $('#date_selector #next i').hide()
       $('#date_selector .trigger').eq(0).hide();
@@ -2108,39 +2540,62 @@ function ANIM(){
         }
 
     }else{
+      $('#date_selector').css({'width':180});
+      $('#current_date').prop('disabled',false).css({'cursor':'pointer'});
+
       $("#anim_panel").children().fadeOut(10);
       $("#anim_panel").slideUp();
-      $('#anim_btn').css({'color':'#9d0202'});
+      //$('#anim_btn').css({'color':'#9d0202'});
+
+      $('#anim_btn i').removeClass('fa-minus-square-o');
+      $('#anim_btn i').addClass('fa-plus-square-o');
+
       $('#date_selector #previous i').show()
       $('#date_selector #next i').show()
       $('#date_selector .trigger').eq(0).show();
     }
   }
 
-  this.choose_dates=function(date0,date1){
+  this.choose_dates=function(date0,date1,dt){
     // get number of frames:
-    M.times(date0,date1,function(t){
+    M.times(date0,date1,dt,function(t){
 
-      // format dates:
+    console.log('CHOOSING dates '+date0+' '+date1+' '+dt);
+
+      // format dates and find number of new dates (not yet loaded by MASTER)
       self.dates=new Array(t.length);
+      var nNewDates=0;
       for (var i=0;i<t.length;i++){
         self.dates[i]=format_date(new Date(t[i]))[0];
+        if (M.dates.indexOf(self.dates[i])===-1) nNewDates++;
       }
+      console.log('n dates= '+t.length+ ' new dates= '+nNewDates);
 
-      if (t.length<2){
-        $('#anim_panel_info2').html('need more than '+t.length+' frames');
+      if (t.length==0){
+        $('#anim_panel_info2').show().html('no frames found');
+      }else if (t.length<2){
+        $('#anim_panel_info2').show().html('need more than '+t.length+' frames');
       }else{
-        // show number of frames:
-        $('#anim_panel_info2').html('frames to load: '+t.length);
 
-        // show load button:
-        $('#anim_panel_okLoad').show();
+        //if (t.length<=57){ //one week of hourly frames: load autmatically
+        if (nNewDates<=6){
+          //$('#anim_panel_info2').html('');
+          $('#anim_panel_okLoad').hide();
+          self.load();
 
-        // set button task:
-        $('#anim_panel_okLoad').off('click')
-                               .click(function(){self.load();});
+        }else { // ask for user's conformation !
+          // show number of frames:
+          $('#anim_panel_info2').show().html('frames to load: '+t.length +'('+nNewDates+' new)');
 
-        self.newDates=true
+          // show load button:
+          $('#anim_panel_okLoad').show();
+
+          // set button task:
+          $('#anim_panel_okLoad').off('click')
+                                 .click(function(){self.load();});
+          self.newDates=true
+        }
+
 
       }
 
@@ -2148,13 +2603,17 @@ function ANIM(){
   }
 
   this.load=function(){//date0,n){
+   console.log('LOADING');
     //frame.load_anim(date0,n,0,[$('#anim_panel_info2'),'ready to play'])
     M.load_dates(this.dates,0,
        function(I){ // atLoad
          $('#anim_panel_info2').html('loading '+(I+1)+' of '+self.dates.length);
        },
        function(){ // atEnd
-         $('#anim_panel_info2').html('ready to play')
+//         $('#anim_panel_info2').html('')
+//         $('#anim_panel_info2').show()
+         $('#anim_panel_info2').show().html('ready to play')
+         $('#anim_panel_info2').fadeOut(3000);
        }
     );
 
@@ -2166,17 +2625,67 @@ function ANIM(){
 
     // update player:
     play.stop()
+   console.log('updating PLAYER '+this.dates.length);
     play.update_n(this.dates.length)
 
   }
 
 }
 
-
-function PANEL(trigger,id,html,style){
+/*
+function PANEL_TESTE(trigger,id,html,style,closeOnClick){
 
   $('#mapsWrapper0').append('<div '+style+' id="'+id+'">'+html+'</div>');
 
+  this.closeOnClick=closeOnClick;
+  this.visible=false;
+
+  var self=this;
+
+
+  $("#"+trigger).click(function(e) {
+    if (self.visible){
+    $('#bar').hide(complete=function(){alert('done! hidden')});
+    display=false;
+  }else{
+    $('#bar').show(complete=function(){alert('done! shown')});
+    display=true;
+
+  $(document).click(function() {
+    $('#bar').hide()
+  });
+
+  }
+
+  this.show=function(e){
+     show_dialog(id,1);
+     self.visible=true;
+  }
+
+  this.hide=function(e){
+      // check if clicked inside :
+      //cond=$(e.target).parents('#'+id).length>0 || e.target.id==id;
+      //or simply:
+
+      cond=$(e.target).closest('#'+id).length;
+      if (this.closeOnClick){
+        cond=false; // will close even if clicked inside
+      }
+
+      if (!cond){
+//        $(document).unbind( "click",self.hide);
+        show_dialog(id,0);
+        self.visible=false;
+      }
+  }
+}
+*/
+
+function PANEL(trigger,id,html,style,closeOnClick,allowedClass){
+
+  $('#mapsWrapper0').append('<div '+style+' id="'+id+'">'+html+'</div>');
+
+  this.closeOnClick=closeOnClick;
   var self=this;
 
 
@@ -2184,27 +2693,66 @@ function PANEL(trigger,id,html,style){
     self.toggle(e);
   });
 
+//  $('#'+trigger).mouseup(function(e){
+//    if 
+//  });
+//
+//  this.show_OLD=function(e){
+//      e.stopPropagation();
+//      $(document).bind( "click",self.hide);
+//      show_dialog(id,1);
+//      this.visible=true;
+//  }
+/*
+  this.show=function(e){
+//      e.stopPropagation();
+      e.stopImmediatePropagation();
+//      $(document).bind( "click",self.hide);
+      show_dialog(id,1);
+      self.visible=true;
+      $(document).bind( "click",self.hide);
+//      e.stopPropagation();
+  }
+*/
 
   this.show=function(e){
-      e.stopPropagation();
-      $(document).bind( "click",self.hide);
-      show_dialog(id,1);
-      this.visible=true;
+     show_dialog(id,1,function(){$(document).bind( "click",self.hide)});
+     self.visible=true;
   }
+
+/*
+  this.hide_=function(e){
+     show_dialog(id,0,function(){$(document).unbind( "click",self.hide)});
+     self.visible=false;
+  }
+*/
 
   this.hide=function(e){
       // check if clicked inside :
-      cond=$(e.target).parents('#'+id).length>0 || e.target.id==id;
-      cond=false; // allow click inside!
+      //cond=$(e.target).parents('#'+id).length>0 || e.target.id==id;
+      //or simply:
+
+      var cond=$(e.target).closest('#'+id).length;
+
+      // now check if clicked in some other object with class matching allowedClass:
+///      console.log(e.target.className);
+      if (allowedClass && e.target &&  e.target.className && e.target.className.match){
+        var re = new RegExp(allowedClass, 'g'); // same as /allowedClass/g
+        if (e.target.className.match(re))
+        cond=cond | e.target.className.match(re).length;
+///        console.log(allowedClass+' -- '+re+' -- '+e.target.className.match(re).length);
+      }
+
+      if (self.closeOnClick){
+        cond=false; // will close even if clicked inside
+      }
       if (!cond){
-        $(document).unbind( "click",self.hide);
-        show_dialog(id,0);
+        show_dialog(id,0,function(){$(document).unbind( "click",self.hide)});
         self.visible=false;
       }
   }
 
   this.toggle=function(e){
-    //this.visible=show_dialog('conf_panel')
     if (this.visible) this.hide(e)
     else this.show(e)
   }
@@ -2332,11 +2880,11 @@ function Logos(){
 
   var s0='\
   <style>\
-    #gloLogo {position:absolute;top:2px;left:90px;\
+    #gloLogo {position:absolute;top:2px;left:60px;\
               z-index:1000;display:none; height:80px\
              }\
     \
-    #gergLogo {position:absolute ; top:5px; left: 180px;height: 70px;\
+    #gergLogo {position:absolute ; top:5px; left: 150px;height: 70px;\
                z-index:1000;display:none;\
               }\
   </style>\
@@ -2370,3 +2918,44 @@ function Logos(){
   }
   this.check();
 }
+
+/*
+function RIVER(){
+
+  var s=' \
+  <style> \
+    .drag {fill: #788497; cursor:pointer} \
+    .drag:hover {fill: #abbcd6} \
+    .playb {stroke: #abbcd6; stroke-width:0.5; fill:#597cc0;cursor:pointer} \
+    .playb:hover {stroke: #002266;} \
+  </style> \
+  <svg height="'+h+'" width="'+w+'" style="border:0px solid red"> \
+  <polygon class="playb" id="stopb"\
+    points="'+X[0]+','+(h/2+h/4)+' '+X[1]+','+(h/2+h/4)+' '+X[1]+','+(h/2-h/4)+' '+X[0]+','+(h/2-h/4)+'" /> \
+  <polygon class="playb" id="playb"\
+    points="'+X[2]+','+(h/2+h/4)+' '+X[5]+','+(h/2)+' '+X[2]+','+(h/2-h/4)+'" /> \
+  <path class="playb" id="pauseb"\
+    d="M'+X[2]+' '+(h/2+h/4)+' L'+X[3]+' '+(h/2+h/4)+' L'+X[3]+' '+(h/2-h/4)+' L'+X[2]+' '+(h/2-h/4)+' Z \
+       M'+X[4]+' '+(h/2+h/4)+' L'+X[5]+' '+(h/2+h/4)+' L'+X[5]+' '+(h/2-h/4)+' L'+X[4]+' '+(h/2-h/4)+' Z" \
+       style="display:none" /> \
+  <path style="stroke: #002266;cursor:pointer" \
+    d="M'+dx0+' '+h/2+' L'+(this.L+dx0)+' '+h/2+'" /> \
+  <circle id="pmove0" cx="'+dx0+'" cy="'+h/2+'" r="5" fill="#d4d4d4"/> \
+  <circle id="pmove1" cx="'+(this.L+dx0)+'" cy="'+h/2+'" r="5" fill="#d4d4d4"/> \
+  <circle class="drag" id="pmove"  cx="'+dx0+'" cy="'+h/2+'" r="7" fill="blue"/>'
+  s+='<g id="inner_pts">';
+  s+=this.innerPoints(n);
+  s+='</g>';
+  s+=' \
+  </svg>';
+//  alert(s);
+  $('#'+cid).html(s);
+
+  this.update_n=function(N){
+    $('#inner_pts').html(this.innerPoints(N));
+  }
+
+
+}
+
+*/
